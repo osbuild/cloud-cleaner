@@ -1,2 +1,2 @@
 # cloud-cleaner
-cloud-cleaner is a tool that removes leftover cloud resources from testing
+cloud-cleaner (previously known as scheduled-cloud-cleaner) is a tool that removes leftover cloud resources from testing
