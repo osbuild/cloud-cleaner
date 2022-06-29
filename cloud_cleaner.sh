@@ -29,6 +29,8 @@ fi
 
 az login --service-principal --username "${V2_AZURE_CLIENT_ID}" --password "${V2_AZURE_CLIENT_SECRET}" --tenant "${AZURE_TENANT_ID}"
 
+#---------------------------------------------------------------
+
 # List all resources from AZURE_RESOURCE_GROUP
 RESOURCE_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP")
 RESOURCE_COUNT=$( echo "$RESOURCE_LIST" | jq .[].name | wc -l)
@@ -89,8 +91,26 @@ for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
     done
 done
 
-echo "Azure cleanup complete!"
+#---------------------------------------------------------------
 
+HOURS_BACK="${HOURS_BACK:-6}"
+DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
+
+TAGGED=$(az rest --method GET --url "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resources" \
+--url-parameters api-version=2020-06-01 \$expand=createdTime,tags \$select=name,createdTime \
+| jq -c '.value[] | try {"gitlab-ci-test": .tags."gitlab-ci-test","Id": .id, "CreatedTime": .createdTime} | select(."gitlab-ci-test" != null)')
+
+for resource in $TAGGED; do
+    CREATION_TIME=$(echo "${resource}" | jq .CreatedTime | tr -d '"')
+    RESOURCE_ID=$(echo "${resource}" | jq .Id | tr -d '"')
+
+	if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
+                az resource delete --ids ${RESOURCE_ID}
+                echo "destroyed resource: ${RESOURCE_ID}"
+	fi
+done
+
+echo "Azure cleanup complete!"
 
 #---------------------------------------------------------------
 # 			AWS cleanup
