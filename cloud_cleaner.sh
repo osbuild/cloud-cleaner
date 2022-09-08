@@ -37,37 +37,34 @@ RESOURCE_COUNT=$( echo "$RESOURCE_LIST" | jq .[].name | wc -l)
 # filter out resources older than X hours
 HOURS_BACK="${HOURS_BACK:-6}"
 DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
-OLD_RESOURCE_LIST_NAMES=()
-for i in $(seq 0 $(("$RESOURCE_COUNT"-1))); do
-    RESOURCE_TIME=$(echo "$RESOURCE_LIST" | jq ".[$i].createdTime" | tr -d '"')
-    RESOURCE_TYPE=$(echo "$RESOURCE_LIST" | jq ".[$i].type" | tr -d '"')
-    RESOURCE_TIME_SECONDS=$(date -d "$RESOURCE_TIME" +%s)
-    if [[ "$RESOURCE_TIME_SECONDS" -lt "$DELETE_TIME" && "$RESOURCE_TYPE" != Microsoft.Storage/storageAccounts ]]; then
-        OLD_RESOURCE_LIST_NAMES+=("$(echo "$RESOURCE_LIST" | jq .["$i"].name | sed -e 's/^[^-]*-//' | tr -d '"')")
-    fi
-done
 
-#Exit early if no there are no resources to delete
-if [ ${#OLD_RESOURCE_LIST_NAMES[@]} == 0 ]; then
-    echo "Nothing to delete in the standard storage account."
-fi
+# Delete resources in a specific order, as dependency on one another might prevent resource deletion
+RESOURCE_TYPES=(
+    "Microsoft.Compute/virtualMachines"
+    "Microsoft.Network/networkInterfaces"
+    "Microsoft.Network/networkSecurityGroups"
+    "Microsoft.Network/publicIPAddresses"
+    "Microsoft.Network/virtualNetworks"
+    "Microsoft.Compute/images"
+    "Microsoft.Compute/disks"
+)
 
-# Keep only unique resource names
-mapfile -t RESOURCE_TO_DELETE_LIST  < <(printf "%s\n" "${OLD_RESOURCE_LIST_NAMES[@]}" | sort -u)
-echo "${RESOURCE_TO_DELETE_LIST[@]}"
-
-TO_DELETE_COUNT=${#RESOURCE_TO_DELETE_LIST[@]}
-echo "There are resources from $TO_DELETE_COUNT test runs to delete."
-
-for i in $(seq 0 $(("$TO_DELETE_COUNT"-1))); do
-    echo "Running cloud-cleaner in Azure for resources with TEST_ID: ${RESOURCE_TO_DELETE_LIST[$i]}"
-    TEST_ID=${RESOURCE_TO_DELETE_LIST[$i]} /usr/libexec/osbuild-composer-test/cloud-cleaner
+for i in $(seq 0 $(("${#RESOURCE_TYPES[@]}" - 1))); do
+    echo Deleting "${RESOURCE_TYPES[i]}"
+    FILTERED_RESOURCES=$(echo "$RESOURCE_LIST" | jq -r "map(select(.type == \"${RESOURCE_TYPES[i]}\"))")
+    FILTERED_RESOURCES_LEN=$(echo "$RESOURCE_LIST" | jq -r "map(select(.type == \"${RESOURCE_TYPES[i]}\")) | length")
+    for j in $(seq 0 $(("$FILTERED_RESOURCES_LEN" - 1))); do
+        RESOURCE_TIME=$(echo "$FILTERED_RESOURCES" | jq -r ".[$j].createdTime")
+        RESOURCE_TIME_SECONDS=$(date -d "$RESOURCE_TIME" +%s)
+        if [[ "$RESOURCE_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
+            az resource delete --ids $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")
+        fi
+    done
 done
 
 # Explicitly check the other storage accounts (mostly the api test one)
 STORAGE_ACCOUNT_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP" --resource-type Microsoft.Storage/storageAccounts)
 STORAGE_ACCOUNT_COUNT=$(echo "$STORAGE_ACCOUNT_LIST" | jq .[].name | wc -l)
-DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
     STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq .["$i"].name | tr -d '"')
     echo "Checking storage account $STORAGE_ACCOUNT_NAME for old blobs."
@@ -91,9 +88,6 @@ for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
 done
 
 #---------------------------------------------------------------
-
-HOURS_BACK="${HOURS_BACK:-6}"
-DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 
 TAGGED=$(az rest --method GET --url "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resources" \
 --url-parameters api-version=2020-06-01 \$expand=createdTime,tags \$select=name,createdTime \
