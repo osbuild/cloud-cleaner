@@ -66,18 +66,18 @@ done
 STORAGE_ACCOUNT_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP" --resource-type Microsoft.Storage/storageAccounts)
 STORAGE_ACCOUNT_COUNT=$(echo "$STORAGE_ACCOUNT_LIST" | jq .[].name | wc -l)
 for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
-    STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq .["$i"].name | tr -d '"')
+    STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq -r .["$i"].name)
     echo "Checking storage account $STORAGE_ACCOUNT_NAME for old blobs."
 
     CONTAINER_LIST=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME")
     CONTAINER_COUNT=$(echo "$CONTAINER_LIST" | jq .[].name | wc -l)
     for i2 in $(seq 0 $(("$CONTAINER_COUNT"-1))); do
-        CONTAINER_NAME=$(echo "$CONTAINER_LIST" | jq .["$i2"].name | tr -d '"')
+        CONTAINER_NAME=$(echo "$CONTAINER_LIST" | jq -r .["$i2"].name)
         BLOB_LIST=$(az storage blob list --account-name "$STORAGE_ACCOUNT_NAME" --container-name "$CONTAINER_NAME")
         BLOB_COUNT=$(echo "$BLOB_LIST" | jq .[].name | wc -l)
         for i3 in $(seq 0 $(("$BLOB_COUNT"-1))); do
-            BLOB_NAME=$(echo "$BLOB_LIST" | jq .["$i3"].name | tr -d '"')
-            BLOB_TIME=$(echo "$BLOB_LIST" | jq .["$i3"].properties.lastModified | tr -d '"')
+            BLOB_NAME=$(echo "$BLOB_LIST" | jq -r .["$i3"].name)
+            BLOB_TIME=$(echo "$BLOB_LIST" | jq -r .["$i3"].properties.lastModified)
             BLOB_TIME_SECONDS=$(date -d "$BLOB_TIME" +%s)
             if [[ "$BLOB_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
                 echo "Deleting blob $BLOB_NAME in $STORAGE_ACCOUNT_NAME's $CONTAINER_NAME container."
@@ -94,8 +94,8 @@ TAGGED=$(az rest --method GET --url "https://management.azure.com/subscriptions/
 | jq -c '.value[] | try {"gitlab-ci-test": .tags."gitlab-ci-test","Id": .id, "CreatedTime": .createdTime} | select(."gitlab-ci-test" != null)')
 
 for resource in $TAGGED; do
-    CREATION_TIME=$(echo "${resource}" | jq .CreatedTime | tr -d '"')
-    RESOURCE_ID=$(echo "${resource}" | jq .Id | tr -d '"')
+    CREATION_TIME=$(echo "${resource}" | jq -r .CreatedTime)
+    RESOURCE_ID=$(echo "${resource}" | jq -r .Id)
 
 	if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
                 az resource delete --ids ${RESOURCE_ID}
@@ -150,10 +150,10 @@ $AWS_CMD --version
 INSTANCES=$(${AWS_CMD} ec2 describe-instances | jq -c '.Reservations[].Instances[]|try {"Tag": .Tags[],"InstanceId": .InstanceId,"LaunchTime": .LaunchTime}')
 
 for instance in ${INSTANCES}; do
-	TAG=$(echo "${instance}" | jq '.Tag.Key' | tr -d '"')
-	TAG_VALUE=$(echo "${instance}" | jq '.Tag.Value' | tr -d '"')
-	INSTANCE_ID=$(echo "${instance}" | jq '.InstanceId' | tr -d '"')
-	LAUNCH_TIME=$(echo "${instance}" | jq '.LaunchTime' | tr -d '"')
+	TAG=$(echo "${instance}" | jq -r '.Tag.Key')
+	TAG_VALUE=$(echo "${instance}" | jq -r '.Tag.Value')
+	INSTANCE_ID=$(echo "${instance}" | jq -r '.InstanceId')
+	LAUNCH_TIME=$(echo "${instance}" | jq -r '.LaunchTime')
 
 	if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then	
 		if [[ $(date -d "${LAUNCH_TIME}" +%s) -lt "${DELETE_TIME}" ]]; then
@@ -170,10 +170,10 @@ done
 IMAGES=$($AWS_CMD ec2 describe-images --owner self | jq -c '.Images[] | try {"Tag": .Tags[], "ImageId": .ImageId, "CreationDate": .CreationDate}')
 
 for image in ${IMAGES}; do
-	TAG=$(echo "${image}" | jq '.Tag.Key' | tr -d '"')
-	TAG_VALUE=$(echo "${image}" | jq '.Tag.Value' | tr -d '"')
-	IMAGE_ID=$(echo "${image}" | jq '.ImageId' | tr -d '"')
-	CREATION_DATE=$(echo "${image}" | jq '.CreationDate' | tr -d '"')
+	TAG=$(echo "${image}" | jq -r '.Tag.Key')
+	TAG_VALUE=$(echo "${image}" | jq -r '.Tag.Value')
+	IMAGE_ID=$(echo "${image}" | jq -r '.ImageId')
+	CREATION_DATE=$(echo "${image}" | jq -r '.CreationDate')
 
 	if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then
 		if [[ $(date -d "${CREATION_DATE}" +%s) -lt "${DELETE_TIME}" ]]; then
@@ -189,10 +189,10 @@ done
 SNAPSHOTS=$($AWS_CMD --color on ec2 describe-snapshots --owner self | jq -c '.Snapshots[] | try {"Tag": .Tags[], "SnapshotId": .SnapshotId, "StartTime": .StartTime}')
 
 for snapshot in ${SNAPSHOTS}; do
-	TAG=$(echo "${snapshot}" | jq '.Tag.Key' | tr -d '"')
-	TAG_VALUE=$(echo "${snapshot}" | jq '.Tag.Value' | tr -d '"')
-	SNAPSHOT_ID=$(echo "${snapshot}" | jq '.SnapshotId' | tr -d '"')
-	START_TIME=$(echo "${snapshot}" | jq '.StartTime' | tr -d '"')
+	TAG=$(echo "${snapshot}" | jq -r '.Tag.Key')
+	TAG_VALUE=$(echo "${snapshot}" | jq -r '.Tag.Value')
+	SNAPSHOT_ID=$(echo "${snapshot}" | jq -r '.SnapshotId')
+	START_TIME=$(echo "${snapshot}" | jq -r '.StartTime')
 
 	if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then
 		if [[ $(date -d "${START_TIME}" +%s) -lt "${DELETE_TIME}" ]]; then
@@ -208,12 +208,12 @@ done
 OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])
 
 for object in ${OBJECTS}; do
-        LAST_MODIFIED=$(echo "${object}" | jq '.LastModified' | tr -d '"')
-        OBJECT_KEY=$(echo "${object}" | jq '.Key' | tr -d '"')
+        LAST_MODIFIED=$(echo "${object}" | jq -r '.LastModified')
+        OBJECT_KEY=$(echo "${object}" | jq -r '.Key')
 
         if [[ $(date -d "${LAST_MODIFIED}" +%s) -lt ${DELETE_TIME} ]]; then
-                TAG=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq .TagSet[0].Key | tr -d '"')
-                TAG_VALUE=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq .TagSet[0].Value | tr -d '"')
+                TAG=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -r .TagSet[0].Key)
+                TAG_VALUE=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -r .TagSet[0].Value)
 
                 if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then
                         $AWS_CMD s3 rm "s3://${AWS_BUCKET}/${OBJECT_KEY}"
@@ -259,11 +259,11 @@ INSTANCES=$($GCP_CMD compute instances list --filter='labels.gitlab-ci-test:true
 	| jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp, "zone": .zone}')
 
 for instance in ${INSTANCES}; do                
-	CREATION_TIME=$(echo "${instance}" | jq '.creationTimestamp' | tr -d '"')
+	CREATION_TIME=$(echo "${instance}" | jq -r '.creationTimestamp')
 
         if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
-                ZONE=$(echo "${instance}" | jq '.zone' | awk -F / '{print $NF}' | tr -d '"')
-                NAME=$(echo "${instance}" | jq '.name' | tr -d '"')
+                ZONE=$(echo "${instance}" | jq -r '.zone' | awk -F / '{print $NF}')
+                NAME=$(echo "${instance}" | jq -r '.name')
                 $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
                 echo "deleted instance: ${NAME}"
         fi
@@ -274,10 +274,10 @@ IMAGES=$($GCP_CMD compute images list --filter='labels.gitlab-ci-test:true' \
 	| jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp}')
 
 for image in $IMAGES; do
-        CREATION_TIME=$(echo "${image}" | jq '.creationTimestamp' | tr -d '"')
+        CREATION_TIME=$(echo "${image}" | jq -r '.creationTimestamp')
 
         if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
-                NAME=$(echo "${image}" | jq '.name' | tr -d '"')
+                NAME=$(echo "${image}" | jq -r '.name')
                 $GCP_CMD compute images delete "$NAME"
                 echo "deleted image: ${NAME}"        
 	fi
