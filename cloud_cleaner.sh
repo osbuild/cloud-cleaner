@@ -50,30 +50,33 @@ RESOURCE_TYPES=(
 )
 
 for i in $(seq 0 $(("${#RESOURCE_TYPES[@]}" - 1))); do
-    echo Deleting "${RESOURCE_TYPES[i]}"
-    FILTERED_RESOURCES=$(echo "$RESOURCE_LIST" | jq -r "map(select(.type == \"${RESOURCE_TYPES[i]}\"))")
-    FILTERED_RESOURCES_LEN=$(echo "$RESOURCE_LIST" | jq -r "map(select(.type == \"${RESOURCE_TYPES[i]}\")) | length")
+    echo -e "\nDeleting ${RESOURCE_TYPES[i]}\n"
+    FILTERED_RESOURCES=$(echo "$RESOURCE_LIST" | jq -r "map(select(.type == \"${RESOURCE_TYPES[i]}\") | select(.tags.\"persist\" != \"true\"))")
+    FILTERED_RESOURCES_LEN=$(echo "$FILTERED_RESOURCES" | jq -r "map(select(.type == \"${RESOURCE_TYPES[i]}\")) | length")
     for j in $(seq 0 $(("$FILTERED_RESOURCES_LEN" - 1))); do
         RESOURCE_TIME=$(echo "$FILTERED_RESOURCES" | jq -r ".[$j].createdTime")
         RESOURCE_TIME_SECONDS=$(date -d "$RESOURCE_TIME" +%s)
         if [[ "$RESOURCE_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
             az resource delete --ids $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")
+            echo "Deleted resource with id $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")"
         fi
     done
 done
 
+                             
+echo -e "-------------------------\nCleaning storage accounts\n-------------------------"
 # Explicitly check the other storage accounts (mostly the api test one)
-STORAGE_ACCOUNT_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP" --resource-type Microsoft.Storage/storageAccounts)
-STORAGE_ACCOUNT_COUNT=$(echo "$STORAGE_ACCOUNT_LIST" | jq .[].name | wc -l)
+STORAGE_ACCOUNT_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP" --resource-type Microsoft.Storage/storageAccounts | jq -c ".[] | select(.tags.\"persist\" != \"true\")")
+STORAGE_ACCOUNT_COUNT=$(echo "$STORAGE_ACCOUNT_LIST" | jq -r .name | wc -l)
 for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
-    STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq -r .["$i"].name)
-    echo "Checking storage account $STORAGE_ACCOUNT_NAME for old blobs."
+    STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq -sr .["$i"].name)
+    echo -e "\nChecking storage account $STORAGE_ACCOUNT_NAME for old blobs.\n"
 
-    CONTAINER_LIST=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME")
+    CONTAINER_LIST=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME" --only-show-errors)
     CONTAINER_COUNT=$(echo "$CONTAINER_LIST" | jq .[].name | wc -l)
     for i2 in $(seq 0 $(("$CONTAINER_COUNT"-1))); do
         CONTAINER_NAME=$(echo "$CONTAINER_LIST" | jq -r .["$i2"].name)
-        BLOB_LIST=$(az storage blob list --account-name "$STORAGE_ACCOUNT_NAME" --container-name "$CONTAINER_NAME")
+        BLOB_LIST=$(az storage blob list --account-name "$STORAGE_ACCOUNT_NAME" --container-name "$CONTAINER_NAME" --only-show-errors)
         BLOB_COUNT=$(echo "$BLOB_LIST" | jq .[].name | wc -l)
         for i3 in $(seq 0 $(("$BLOB_COUNT"-1))); do
             BLOB_NAME=$(echo "$BLOB_LIST" | jq -r .["$i3"].name)
@@ -86,24 +89,6 @@ for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
         done
     done
 done
-
-#---------------------------------------------------------------
-
-TAGGED=$(az rest --method GET --url "https://management.azure.com/subscriptions/${AZURE_SUBSCRIPTION_ID}/resources" \
---url-parameters api-version=2020-06-01 \$expand=createdTime,tags \$select=name,createdTime \
-| jq -c '.value[] | try {"gitlab-ci-test": .tags."gitlab-ci-test","Id": .id, "CreatedTime": .createdTime} | select(."gitlab-ci-test" != null)')
-
-for resource in $TAGGED; do
-    CREATION_TIME=$(echo "${resource}" | jq -r .CreatedTime)
-    RESOURCE_ID=$(echo "${resource}" | jq -r .Id)
-
-	if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
-                az resource delete --ids ${RESOURCE_ID}
-                echo "destroyed resource: ${RESOURCE_ID}"
-	fi
-done
-
-echo "Azure cleanup complete!"
 
 #---------------------------------------------------------------
 # 			AWS cleanup
