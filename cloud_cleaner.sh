@@ -5,6 +5,32 @@ function greenprint {
     echo -e "\033[1;32m[$(date -Isecond)] ${1}\033[0m"
 }
 
+# filter out resources older than X hours
+HOURS_BACK="${HOURS_BACK:-6}"
+DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
+
+while test $# -gt 0; do
+    case "$1" in
+        --dry-run)
+            echo "Dry run mode is enabled"
+            export DRY_RUN="true"
+            shift
+        ;;
+        -h|--help)
+            echo "Cloud Cleaner is a small program to remove unused resources from the cloud"
+            echo "options:"
+            echo "-h, --help        show brief help"
+            echo "--dry-run         show which resources would get removed without doing so"
+            exit
+        ;;
+        *)
+            echo "running default cleanup"
+            export DRY_RUN="false"
+            break
+        ;;
+    esac
+done
+
 #---------------------------------------------------------------
 #                       Azure cleanup
 #---------------------------------------------------------------
@@ -34,10 +60,6 @@ az login --service-principal --username "${V2_AZURE_CLIENT_ID}" --password "${V2
 RESOURCE_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP")
 RESOURCE_COUNT=$( echo "$RESOURCE_LIST" | jq .[].name | wc -l)
 
-# filter out resources older than X hours
-HOURS_BACK="${HOURS_BACK:-6}"
-DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
-
 # Delete resources in a specific order, as dependency on one another might prevent resource deletion
 RESOURCE_TYPES=(
     "Microsoft.Compute/virtualMachines"
@@ -57,8 +79,12 @@ for i in $(seq 0 $(("${#RESOURCE_TYPES[@]}" - 1))); do
         RESOURCE_TIME=$(echo "$FILTERED_RESOURCES" | jq -r ".[$j].createdTime")
         RESOURCE_TIME_SECONDS=$(date -d "$RESOURCE_TIME" +%s)
         if [[ "$RESOURCE_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
-            az resource delete --ids $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")
-            echo "Deleted resource with id $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")"
+            if [ $DRY_RUN == "true" ]; then
+                echo "Resource with id $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id") would get deleted"
+            else
+                az resource delete --ids $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")
+                echo "Deleted resource with id $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")"
+            fi
         fi
     done
 done
@@ -83,8 +109,12 @@ for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
             BLOB_TIME=$(echo "$BLOB_LIST" | jq -r .["$i3"].properties.lastModified)
             BLOB_TIME_SECONDS=$(date -d "$BLOB_TIME" +%s)
             if [[ "$BLOB_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
-                echo "Deleting blob $BLOB_NAME in $STORAGE_ACCOUNT_NAME's $CONTAINER_NAME container."
-                az storage blob delete --only-show-errors --account-name "$STORAGE_ACCOUNT_NAME" --container-name "$CONTAINER_NAME" -n "$BLOB_NAME"
+                if [ $DRY_RUN == "true" ]; then
+                    echo "Blob $BLOB_NAME in $STORAGE_ACCOUNT_NAME's $CONTAINER_NAME container would get deleted."
+                else
+                    echo "Deleting blob $BLOB_NAME in $STORAGE_ACCOUNT_NAME's $CONTAINER_NAME container."
+                    az storage blob delete --only-show-errors --account-name "$STORAGE_ACCOUNT_NAME" --container-name "$CONTAINER_NAME" -n "$BLOB_NAME"
+                fi
             fi
         done
     done
