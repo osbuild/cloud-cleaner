@@ -138,88 +138,170 @@ if ! hash aws; then
         -e AWS_ACCESS_KEY_ID=${V2_AWS_ACCESS_KEY_ID} \
         -e AWS_SECRET_ACCESS_KEY=${V2_AWS_SECRET_ACCESS_KEY} \
         -v ${TEMPDIR}:${TEMPDIR}:Z \
-        ${CONTAINER_IMAGE_CLOUD_TOOLS} aws --region $AWS_REGION --output json --color on"
+        ${CONTAINER_IMAGE_CLOUD_TOOLS} aws --output json --color on"
 else
     echo "Using pre-installed 'aws' from the system"
-    AWS_CMD="aws --region $AWS_REGION --output json --color on"
+    AWS_CMD_NO_REGION="aws --output json --color on"
 fi
-$AWS_CMD --version
+$AWS_CMD_NO_REGION --version
 
+REGIONS=$(${AWS_CMD_NO_REGION} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus == "opt-in-not-required") | .RegionName') 
 
-# Remove tagged and old enough instances
-INSTANCES=$(${AWS_CMD} ec2 describe-instances | jq -c '.Reservations[].Instances[]|try {"Tag": .Tags[],"InstanceId": .InstanceId,"LaunchTime": .LaunchTime}')
+# We use resources in more than one region
+for region in ${REGIONS}; do
+    AWS_CMD="${AWS_CMD_NO_REGION} --region ${region}"
+    greenprint "Cleaning ${region}"
+    # Remove old enough instances that don't have tag persist=true
+    echo -e "------------------\nCleaning instances\n------------------"
+    INSTANCES=$(${AWS_CMD} ec2 describe-instances | tr -d "[:space:]" | jq -c '.Reservations[].Instances[]')
 
-for instance in ${INSTANCES}; do
-	TAG=$(echo "${instance}" | jq -r '.Tag.Key')
-	TAG_VALUE=$(echo "${instance}" | jq -r '.Tag.Value')
-	INSTANCE_ID=$(echo "${instance}" | jq -r '.InstanceId')
-	LAUNCH_TIME=$(echo "${instance}" | jq -r '.LaunchTime')
+    for instance in ${INSTANCES}; do
+        REMOVE=1
+        INSTANCE_ID=$(echo "${instance}" | jq -r '.InstanceId')
+        LAUNCH_TIME=$(echo "${instance}" | jq -r '.LaunchTime')
 
-	if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then	
-		if [[ $(date -d "${LAUNCH_TIME}" +%s) -lt "${DELETE_TIME}" ]]; then
-			$AWS_CMD ec2 terminate-instances --instance-id "${INSTANCE_ID}"
-			echo "The instance with id ${INSTANCE_ID} was terminated"
-        	else
-        		echo "The instance with id ${INSTANCE_ID} was launched less than ${HOURS_BACK} hours ago"
-		fi
-	fi
+        if [[ $(date -d "${LAUNCH_TIME}" +%s) -gt "${DELETE_TIME}" ]]; then
+            REMOVE=0
+            echo "The instance with id ${INSTANCE_ID} was launched less than ${HOURS_BACK} hours ago"
+        fi
+
+        HAS_TAGS=$(echo ${instance} | jq  'has("Tags")')
+        if [ ${HAS_TAGS} = true ]; then
+            TAGS=$(echo "${instance}" | jq -c 'try .Tags[]')
+
+            for tag in ${TAGS}; do
+                    KEY=$(echo ${tag} | jq -r '.Key')
+                    VALUE=$(echo ${tag} | jq -r '.Value')
+
+                if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+                    REMOVE=0
+                    echo "The instance with id ${INSTANCE_ID} has tag 'persist=true'"
+                fi
+            done
+        fi
+
+        if [ ${REMOVE} == 1 ]; then
+            if [ $DRY_RUN == "true" ]; then
+                echo "The instance with id ${INSTANCE_ID} would get terminated"
+            else
+                $AWS_CMD ec2 terminate-instances --instance-id "${INSTANCE_ID}"
+                echo "The instance with id ${INSTANCE_ID} was terminated"
+            fi
+        fi
+    done
+
+    # Remove old enough images that don't have tag persist=true
+    echo -e "---------------\nCleaning images\n---------------"
+    IMAGES=$(${AWS_CMD} ec2 describe-images --owner self | tr -d "[:space:]" | jq -c '.Images[]')
+
+    for image in ${IMAGES}; do
+        REMOVE=1
+        IMAGE_ID=$(echo "${image}" | jq -r '.ImageId')
+        CREATION_DATE=$(echo "${image}" | jq -r '.CreationDate')
+
+        if [[ $(date -d "${CREATION_DATE}" +%s) -gt "${DELETE_TIME}" ]]; then
+            REMOVE=0
+            echo "The image with id ${IMAGE_ID} was created less than ${HOURS_BACK} hours ago"
+        fi
+
+        HAS_TAGS=$(echo ${image} | jq  'has("Tags")')
+        if [ ${HAS_TAGS} = true ]; then
+            TAGS=$(echo "${image}" | jq -c 'try .Tags[]')
+
+            for tag in ${TAGS}; do
+                    KEY=$(echo ${tag} | jq -r '.Key')
+                    VALUE=$(echo ${tag} | jq -r '.Value')
+
+                if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+                    REMOVE=0
+                    echo "The image with id ${IMAGE_ID} has tag 'persist=true'"
+                fi
+            done
+        fi
+
+        if [ ${REMOVE} == 1 ]; then
+            if [ $DRY_RUN == "true" ]; then
+                echo "The image with id ${IMAGE_ID} would get deregistered"
+            else
+                $AWS_CMD ec2 deregister-image --image-id "${IMAGE_ID}"
+                echo "The image with id ${IMAGE_ID} was deregistered"
+            fi
+        fi
+    done
+
+    # Remove old enough snapshots that don't have tag persist=true
+    echo -e "------------------\nCleaning snapshots\n------------------"
+    SNAPSHOTS=$(${AWS_CMD} ec2 describe-snapshots --owner self | tr -d "[:space:]" | jq -c '.Snapshots[]')
+
+    for snapshot in ${SNAPSHOTS}; do
+        REMOVE=1
+        SNAPSHOT_ID=$(echo "${snapshot}" | jq -r '.SnapshotId')
+        START_TIME=$(echo "${snapshot}" | jq -r '.StartTime')
+
+        if [[ $(date -d "${START_TIME}" +%s) -gt "${DELETE_TIME}" ]]; then
+            REMOVE=0
+            echo "The snapshot with id ${SNAPSHOT_ID} was created less than ${HOURS_BACK} hours ago"
+        fi
+
+        HAS_TAGS=$(echo ${snapshot} | jq  'has("Tags")')
+        if [ ${HAS_TAGS} = true ]; then
+            TAGS=$(echo "${snapshot}" | jq -c 'try .Tags[]')
+
+            for tag in ${TAGS}; do
+                    KEY=$(echo ${tag} | jq -r '.Key')
+                    VALUE=$(echo ${tag} | jq -r '.Value')
+
+                if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+                    REMOVE=0
+                    echo "The snapshot with id ${SNAPSHOT_ID} has tag 'persist=true'"
+                fi
+            done
+        fi
+
+        if [ ${REMOVE} == 1 ]; then
+            if [ $DRY_RUN == "true" ]; then
+                echo "The snapshot with id ${SNAPSHOT_ID} would get deleted"
+            else
+                $AWS_CMD ec2 delete-snapshot --snapshot-id "${SNAPSHOT_ID}"
+                echo "The snapshot with id ${SNAPSHOT_ID} was deleted"
+            fi
+        fi
+    done
 done
 
-
-# Remove tagged and old enough images
-IMAGES=$($AWS_CMD ec2 describe-images --owner self | jq -c '.Images[] | try {"Tag": .Tags[], "ImageId": .ImageId, "CreationDate": .CreationDate}')
-
-for image in ${IMAGES}; do
-	TAG=$(echo "${image}" | jq -r '.Tag.Key')
-	TAG_VALUE=$(echo "${image}" | jq -r '.Tag.Value')
-	IMAGE_ID=$(echo "${image}" | jq -r '.ImageId')
-	CREATION_DATE=$(echo "${image}" | jq -r '.CreationDate')
-
-	if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then
-		if [[ $(date -d "${CREATION_DATE}" +%s) -lt "${DELETE_TIME}" ]]; then
-			$AWS_CMD ec2 deregister-image --image-id "${IMAGE_ID}"
-			echo "The image with id ${IMAGE_ID} was deregistered"
-		else
-			echo "The image with id ${IMAGE_ID} was created less than ${HOURS_BACK} hours ago"
-		fi
-	fi
-done
-
-# Remove tagged and old enough snapshots
-SNAPSHOTS=$($AWS_CMD --color on ec2 describe-snapshots --owner self | jq -c '.Snapshots[] | try {"Tag": .Tags[], "SnapshotId": .SnapshotId, "StartTime": .StartTime}')
-
-for snapshot in ${SNAPSHOTS}; do
-	TAG=$(echo "${snapshot}" | jq -r '.Tag.Key')
-	TAG_VALUE=$(echo "${snapshot}" | jq -r '.Tag.Value')
-	SNAPSHOT_ID=$(echo "${snapshot}" | jq -r '.SnapshotId')
-	START_TIME=$(echo "${snapshot}" | jq -r '.StartTime')
-
-	if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then
-		if [[ $(date -d "${START_TIME}" +%s) -lt "${DELETE_TIME}" ]]; then
-			$AWS_CMD ec2 delete-snapshot --snapshot-id "${SNAPSHOT_ID}"
-			echo "The snapshot with id ${SNAPSHOT_ID} was deleted"
-		else
-			echo "The snapshot with id ${SNAPSHOT_ID} was created less than ${HOURS_BACK} hours ago"
-		fi
-	fi
-done
-
-# Remove tagged and old enough s3 objects
+# Remove old enough objects that don't have tag persist=true
+echo -e "----------------\nCleaning objects\n----------------"
 OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])
 
 for object in ${OBJECTS}; do
-        LAST_MODIFIED=$(echo "${object}" | jq -r '.LastModified')
-        OBJECT_KEY=$(echo "${object}" | jq -r '.Key')
+    REMOVE=1
+    LAST_MODIFIED=$(echo "${object}" | jq -r '.LastModified')
+    OBJECT_KEY=$(echo "${object}" | jq -r '.Key')
 
-        if [[ $(date -d "${LAST_MODIFIED}" +%s) -lt ${DELETE_TIME} ]]; then
-                TAG=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -r .TagSet[0].Key)
-                TAG_VALUE=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -r .TagSet[0].Value)
+    if [[ $(date -d "${LAST_MODIFIED}" +%s) -gt ${DELETE_TIME} ]]; then
+        REMOVE=0
+        echo "The object with key ${OBJECT_KEY} was last modified less than ${HOURS_BACK} hours ago"
+    fi
 
-                if [[ ${TAG} == "gitlab-ci-test" && ${TAG_VALUE} == "true" ]]; then
-                        $AWS_CMD s3 rm "s3://${AWS_BUCKET}/${OBJECT_KEY}"
-                        echo "The object with key ${OBJECT_KEY} was removed"
-                fi
+    TAGS=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -c .TagSet[])
+    for tag in ${TAGS}; do
+        KEY=$(echo ${tag} | jq -r '.Key')
+        VALUE=$(echo ${tag} | jq -r '.Value')
+
+        if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+            REMOVE=0
+            echo "The object with key ${OBJECT_KEY} has tag 'persist=true'"
         fi
+    done
+
+    if [ ${REMOVE} == 1 ]; then
+        if [ $DRY_RUN == "true" ]; then
+            echo "The object with key ${OBJECT_KEY} would get removed"
+        else
+            $AWS_CMD s3 rm "s3://${AWS_BUCKET}/${OBJECT_KEY}"
+            echo "The object with key ${OBJECT_KEY} was removed"
+        fi
+    fi
 done
 
 #---------------------------------------------------------------
