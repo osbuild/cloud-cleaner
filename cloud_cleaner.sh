@@ -134,7 +134,7 @@ if ! hash aws; then
     echo "Using 'awscli' from a container"
     sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
 
-    AWS_CMD="sudo ${CONTAINER_RUNTIME} run --rm \
+    AWS_CMD_NO_REGION="sudo ${CONTAINER_RUNTIME} run --rm \
         -e AWS_ACCESS_KEY_ID=${V2_AWS_ACCESS_KEY_ID} \
         -e AWS_SECRET_ACCESS_KEY=${V2_AWS_SECRET_ACCESS_KEY} \
         -v ${TEMPDIR}:${TEMPDIR}:Z \
