@@ -143,6 +143,7 @@ else
 fi
 
 CONTAINER_IMAGE_CLOUD_TOOLS="quay.io/osbuild/cloud-tools:latest"
+AWS_DEFAULT_REGION=$AWS_REGION
 
 # We need awscli to talk to AWS.
 if ! hash aws; then
@@ -152,6 +153,7 @@ if ! hash aws; then
     AWS_CMD_NO_REGION="sudo ${CONTAINER_RUNTIME} run --rm \
         -e AWS_ACCESS_KEY_ID=${V2_AWS_ACCESS_KEY_ID} \
         -e AWS_SECRET_ACCESS_KEY=${V2_AWS_SECRET_ACCESS_KEY} \
+        -e AWS_DEFAULT_REGION=${AWS_REGION} \
         -v ${TEMPDIR}:${TEMPDIR}:Z \
         ${CONTAINER_IMAGE_CLOUD_TOOLS} aws --output json --color on"
 else
