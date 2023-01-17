@@ -354,7 +354,8 @@ GCP_PROJECT=$(jq -r '.project_id' "$GOOGLE_APPLICATION_CREDENTIALS")
 $GCP_CMD config set project "$GCP_PROJECT"
 
 # List tagged intances and remove the old enough ones
-INSTANCES=$($GCP_CMD compute instances list --filter='labels.gitlab-ci-test:true' \
+echo -e "------------------\nCleaning instances\n------------------"
+INSTANCES=$($GCP_CMD compute instances list --filter='NOT labels.persist:true AND NOT labels.persist:true' \
 	| jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp, "zone": .zone}')
 
 for instance in ${INSTANCES}; do                
@@ -363,23 +364,32 @@ for instance in ${INSTANCES}; do
         if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
                 ZONE=$(echo "${instance}" | jq -r '.zone' | awk -F / '{print $NF}')
                 NAME=$(echo "${instance}" | jq -r '.name')
-                $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
-                echo "deleted instance: ${NAME}"
+                if [ $DRY_RUN == "true" ]; then
+                    echo "instance ${NAME} would get deleted."
+                else
+                    $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
+                    echo "deleted instance: ${NAME}"
+                fi
         fi
 done
 
 # List tagged images and remove the old enough ones
-IMAGES=$($GCP_CMD compute images list --filter='labels.gitlab-ci-test:true' \
-	| jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp}')
+echo -e "---------------\nCleaning images\n---------------"
+IMAGES=$($GCP_CMD compute images list --filter='NOT labels.persist:true AND NOT labels.persist:true' \
+	| jq -c '.[] | select(.selfLink|contains("cockpituous")) | {"name": .name, "creationTimestamp": .creationTimestamp}')
 
 for image in $IMAGES; do
         CREATION_TIME=$(echo "${image}" | jq -r '.creationTimestamp')
 
         if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
                 NAME=$(echo "${image}" | jq -r '.name')
-                $GCP_CMD compute images delete "$NAME"
-                echo "deleted image: ${NAME}"        
-	fi
+                if [ $DRY_RUN == "true" ]; then
+                    echo "image ${NAME} would get deleted."
+                else
+                    $GCP_CMD compute images delete "$NAME"
+                    echo "deleted image: ${NAME}"
+                fi
+	    fi
 done
 
 
