@@ -11,22 +11,22 @@ DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 
 while test $# -gt 0; do
     case "$1" in
-        --dry-run)
-            echo "Dry run mode is enabled"
-            export DRY_RUN="true"
-            shift
+    --dry-run)
+        echo "Dry run mode is enabled"
+        export DRY_RUN="true"
+        shift
         ;;
-        -h|--help)
-            echo "Cloud Cleaner is a small program to remove unused resources from the cloud"
-            echo "options:"
-            echo "-h, --help        show brief help"
-            echo "--dry-run         show which resources would get removed without doing so"
-            exit
+    -h | --help)
+        echo "Cloud Cleaner is a small program to remove unused resources from the cloud"
+        echo "options:"
+        echo "-h, --help        show brief help"
+        echo "--dry-run         show which resources would get removed without doing so"
+        exit
         ;;
-        *)
-            echo "running default cleanup"
-            export DRY_RUN="false"
-            break
+    *)
+        echo "running default cleanup"
+        export DRY_RUN="false"
+        break
         ;;
     esac
 done
@@ -48,8 +48,8 @@ enabled=1
 gpgcheck=1
 gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/azure-cli.repo
 
-  sudo dnf install -y azure-cli
-  az version
+    sudo dnf install -y azure-cli
+    az version
 fi
 
 az login --service-principal --username "${V2_AZURE_CLIENT_ID}" --password "${V2_AZURE_CLIENT_SECRET}" --tenant "${AZURE_TENANT_ID}"
@@ -58,7 +58,7 @@ az login --service-principal --username "${V2_AZURE_CLIENT_ID}" --password "${V2
 
 # List all resources from AZURE_RESOURCE_GROUP
 RESOURCE_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP")
-RESOURCE_COUNT=$( echo "$RESOURCE_LIST" | jq .[].name | wc -l)
+RESOURCE_COUNT=$(echo "$RESOURCE_LIST" | jq .[].name | wc -l)
 
 # Delete resources in a specific order, as dependency on one another might prevent resource deletion
 RESOURCE_TYPES=(
@@ -89,22 +89,21 @@ for i in $(seq 0 $(("${#RESOURCE_TYPES[@]}" - 1))); do
     done
 done
 
-                             
 echo -e "-------------------------\nCleaning storage accounts\n-------------------------"
 # Explicitly check the other storage accounts (mostly the api test one)
 STORAGE_ACCOUNT_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP" --resource-type Microsoft.Storage/storageAccounts | jq -c ".[] | select(.tags.\"persist\" != \"true\")")
 STORAGE_ACCOUNT_COUNT=$(echo "$STORAGE_ACCOUNT_LIST" | jq -r .name | wc -l)
-for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT"-1))); do
+for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT" - 1))); do
     STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq -sr .["$i"].name)
     echo -e "\nChecking storage account $STORAGE_ACCOUNT_NAME for old blobs.\n"
 
     CONTAINER_LIST=$(az storage container list --account-name "$STORAGE_ACCOUNT_NAME" --only-show-errors)
     CONTAINER_COUNT=$(echo "$CONTAINER_LIST" | jq .[].name | wc -l)
-    for i2 in $(seq 0 $(("$CONTAINER_COUNT"-1))); do
+    for i2 in $(seq 0 $(("$CONTAINER_COUNT" - 1))); do
         CONTAINER_NAME=$(echo "$CONTAINER_LIST" | jq -r .["$i2"].name)
         BLOB_LIST=$(az storage blob list --account-name "$STORAGE_ACCOUNT_NAME" --container-name "$CONTAINER_NAME" --only-show-errors)
         BLOB_COUNT=$(echo "$BLOB_LIST" | jq .[].name | wc -l)
-        for i3 in $(seq 0 $(("$BLOB_COUNT"-1))); do
+        for i3 in $(seq 0 $(("$BLOB_COUNT" - 1))); do
             BLOB_NAME=$(echo "$BLOB_LIST" | jq -r .["$i3"].name)
             BLOB_TIME=$(echo "$BLOB_LIST" | jq -r .["$i3"].properties.lastModified)
             BLOB_TIME_SECONDS=$(date -d "$BLOB_TIME" +%s)
@@ -162,7 +161,7 @@ else
 fi
 $AWS_CMD_NO_REGION --version
 
-REGIONS=$(${AWS_CMD_NO_REGION} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus == "opt-in-not-required") | .RegionName') 
+REGIONS=$(${AWS_CMD_NO_REGION} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus == "opt-in-not-required") | .RegionName')
 
 # We use resources in more than one region
 for region in ${REGIONS}; do
@@ -182,13 +181,13 @@ for region in ${REGIONS}; do
             echo "The instance with id ${INSTANCE_ID} was launched less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${instance} | jq  'has("Tags")')
+        HAS_TAGS=$(echo ${instance} | jq 'has("Tags")')
         if [ ${HAS_TAGS} = true ]; then
             TAGS=$(echo "${instance}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                    KEY=$(echo ${tag} | jq -r '.Key')
-                    VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo ${tag} | jq -r '.Key')
+                VALUE=$(echo ${tag} | jq -r '.Value')
 
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
@@ -221,13 +220,13 @@ for region in ${REGIONS}; do
             echo "The image with id ${IMAGE_ID} was created less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${image} | jq  'has("Tags")')
+        HAS_TAGS=$(echo ${image} | jq 'has("Tags")')
         if [ ${HAS_TAGS} = true ]; then
             TAGS=$(echo "${image}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                    KEY=$(echo ${tag} | jq -r '.Key')
-                    VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo ${tag} | jq -r '.Key')
+                VALUE=$(echo ${tag} | jq -r '.Value')
 
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
@@ -260,13 +259,13 @@ for region in ${REGIONS}; do
             echo "The snapshot with id ${SNAPSHOT_ID} was created less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${snapshot} | jq  'has("Tags")')
+        HAS_TAGS=$(echo ${snapshot} | jq 'has("Tags")')
         if [ ${HAS_TAGS} = true ]; then
             TAGS=$(echo "${snapshot}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                    KEY=$(echo ${tag} | jq -r '.Key')
-                    VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo ${tag} | jq -r '.Key')
+                VALUE=$(echo ${tag} | jq -r '.Value')
 
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
@@ -329,21 +328,21 @@ greenprint "starting gcp cleanup"
 
 # We need Google Gloud SDK to comunicate with gcp
 if ! hash gcloud; then
-  echo "Using 'gcloud' from a container"
-  sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
+    echo "Using 'gcloud' from a container"
+    sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
 
-  # directory mounted to the container, in which gcloud stores the credentials after logging in
-  GCP_CMD_CREDS_DIR="${TEMPDIR}/gcloud_credentials"
-  mkdir "${GCP_CMD_CREDS_DIR}"
+    # directory mounted to the container, in which gcloud stores the credentials after logging in
+    GCP_CMD_CREDS_DIR="${TEMPDIR}/gcloud_credentials"
+    mkdir "${GCP_CMD_CREDS_DIR}"
 
-  GCP_CMD="sudo ${CONTAINER_RUNTIME} run --rm \
+    GCP_CMD="sudo ${CONTAINER_RUNTIME} run --rm \
     -v ${GCP_CMD_CREDS_DIR}:/root/.config/gcloud:Z \
     -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS}:Z \
     -v ${TEMPDIR}:${TEMPDIR}:Z \
     ${CONTAINER_IMAGE_CLOUD_TOOLS} gcloud --format=json"
 else
-  echo "Using pre-installed 'gcloud' from the system"
-  GCP_CMD="gcloud --format=json --quiet"
+    echo "Using pre-installed 'gcloud' from the system"
+    GCP_CMD="gcloud --format=json --quiet"
 fi
 $GCP_CMD --version
 
@@ -354,34 +353,43 @@ GCP_PROJECT=$(jq -r '.project_id' "$GOOGLE_APPLICATION_CREDENTIALS")
 $GCP_CMD config set project "$GCP_PROJECT"
 
 # List tagged intances and remove the old enough ones
-INSTANCES=$($GCP_CMD compute instances list --filter='labels.gitlab-ci-test:true' \
-	| jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp, "zone": .zone}')
+echo -e "------------------\nCleaning instances\n------------------"
+INSTANCES=$($GCP_CMD compute instances list --filter='NOT labels.persist:true AND NOT tags.persist:true' |
+    jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp, "zone": .zone}')
 
-for instance in ${INSTANCES}; do                
-	CREATION_TIME=$(echo "${instance}" | jq -r '.creationTimestamp')
+for instance in ${INSTANCES}; do
+    CREATION_TIME=$(echo "${instance}" | jq -r '.creationTimestamp')
 
-        if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
-                ZONE=$(echo "${instance}" | jq -r '.zone' | awk -F / '{print $NF}')
-                NAME=$(echo "${instance}" | jq -r '.name')
-                $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
-                echo "deleted instance: ${NAME}"
+    if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
+        ZONE=$(echo "${instance}" | jq -r '.zone' | awk -F / '{print $NF}')
+        NAME=$(echo "${instance}" | jq -r '.name')
+        if [ $DRY_RUN == "true" ]; then
+            echo "instance ${NAME} would get deleted."
+        else
+            $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
+            echo "deleted instance: ${NAME}"
         fi
+    fi
 done
 
 # List tagged images and remove the old enough ones
-IMAGES=$($GCP_CMD compute images list --filter='labels.gitlab-ci-test:true' \
-	| jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp}')
+echo -e "---------------\nCleaning images\n---------------"
+IMAGES=$($GCP_CMD compute images list --filter='NOT labels.persist:true' |
+    jq -c '.[] | select(.selfLink|contains("cockpituous")) | {"name": .name, "creationTimestamp": .creationTimestamp}')
 
 for image in $IMAGES; do
-        CREATION_TIME=$(echo "${image}" | jq -r '.creationTimestamp')
+    CREATION_TIME=$(echo "${image}" | jq -r '.creationTimestamp')
 
-        if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
-                NAME=$(echo "${image}" | jq -r '.name')
-                $GCP_CMD compute images delete "$NAME"
-                echo "deleted image: ${NAME}"        
-	fi
+    if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
+        NAME=$(echo "${image}" | jq -r '.name')
+        if [ $DRY_RUN == "true" ]; then
+            echo "image ${NAME} would get deleted."
+        else
+            $GCP_CMD compute images delete "$NAME"
+            echo "deleted image: ${NAME}"
+        fi
+    fi
 done
-
 
 #---------------------------------------------------------------
 #                       vmware cleanup
@@ -395,11 +403,11 @@ GOVC_CMD=/tmp/govc
 if ! hash govc; then
     greenprint "Installing govc"
     pushd /tmp || exit
-        curl -Ls --retry 5 --output govc.gz \
-            https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz
-        gunzip -f govc.gz
-        chmod +x /tmp/govc
-        $GOVC_CMD version
+    curl -Ls --retry 5 --output govc.gz \
+        https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz
+    gunzip -f govc.gz
+    chmod +x /tmp/govc
+    $GOVC_CMD version
     popd || exit
 fi
 
@@ -408,11 +416,11 @@ GOVC_AUTH="${GOVMOMI_USERNAME}:${GOVMOMI_PASSWORD}@${GOVMOMI_URL}"
 TAGGED=$($GOVC_CMD tags.attached.ls -u "${GOVC_AUTH}" -k "gitlab-ci-test" | xargs -r ${GOVC_CMD} ls -u "${GOVC_AUTH}" -k -L)
 
 for vm in $TAGGED; do
-	# Could use JSON output, but it takes much longer, as it includes more properties
-	CREATION_TIME=$($GOVC_CMD vm.info -u "${GOVC_AUTH}" -k "${vm}" | awk '$1 ~ /^ *Boot/ { print $3 " " $4 $5 }')
-	
-	if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
-                $GOVC_CMD vm.destroy -u "${GOVC_AUTH}" -k "${vm}"
-                echo "destroyed vm: ${vm}"
-	fi
+    # Could use JSON output, but it takes much longer, as it includes more properties
+    CREATION_TIME=$($GOVC_CMD vm.info -u "${GOVC_AUTH}" -k "${vm}" | awk '$1 ~ /^ *Boot/ { print $3 " " $4 $5 }')
+
+    if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
+        $GOVC_CMD vm.destroy -u "${GOVC_AUTH}" -k "${vm}"
+        echo "destroyed vm: ${vm}"
+    fi
 done
