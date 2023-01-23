@@ -44,9 +44,6 @@ if [ -z "$COMMON_INCLUDED" ]; then
         CONTAINER_RUNTIME=podman
     elif which docker 2>/dev/null >&2; then
         CONTAINER_RUNTIME=docker
-    else
-        echo No container runtime found, install podman or docker.
-        exit 2
     fi
 
     CONTAINER_IMAGE_CLOUD_TOOLS="quay.io/osbuild/cloud-tools:latest"

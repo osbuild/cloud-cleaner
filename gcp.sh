@@ -11,6 +11,10 @@ greenprint "starting gcp cleanup"
 
 # We need Google Gloud SDK to comunicate with gcp
 if ! hash gcloud; then
+    if [ -z "$CONTAINER_RUNTIME" ]; then
+        echo 'no gcloud cli, nor container runtime available, cannot proceed'
+        exit 2
+    fi
     echo "Using 'gcloud' from a container"
     sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
 

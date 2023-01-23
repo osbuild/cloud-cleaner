@@ -12,6 +12,10 @@ AWS_DEFAULT_REGION=$AWS_REGION
 
 # We need awscli to talk to AWS.
 if ! hash aws; then
+    if [ -z "$CONTAINER_RUNTIME" ]; then
+        echo 'no awscli, nor container runtime available, cannot proceed'
+        exit 2
+    fi
     echo "Using 'awscli' from a container"
     sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
 
