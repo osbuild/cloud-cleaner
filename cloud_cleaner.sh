@@ -31,6 +31,24 @@ while test $# -gt 0; do
     esac
 done
 
+TEMPDIR=$(mktemp -d)
+function cleanup() {
+    sudo rm -rf "$TEMPDIR"
+}
+trap cleanup EXIT
+
+# Check available container runtime
+if which podman 2>/dev/null >&2; then
+    CONTAINER_RUNTIME=podman
+elif which docker 2>/dev/null >&2; then
+    CONTAINER_RUNTIME=docker
+else
+    echo No container runtime found, install podman or docker.
+    exit 2
+fi
+
+CONTAINER_IMAGE_CLOUD_TOOLS="quay.io/osbuild/cloud-tools:latest"
+
 #---------------------------------------------------------------
 #                       Azure cleanup
 #---------------------------------------------------------------
@@ -125,23 +143,6 @@ done
 
 greenprint "Starting aws cleanup"
 
-TEMPDIR=$(mktemp -d)
-function cleanup() {
-    sudo rm -rf "$TEMPDIR"
-}
-trap cleanup EXIT
-
-# Check available container runtime
-if which podman 2>/dev/null >&2; then
-    CONTAINER_RUNTIME=podman
-elif which docker 2>/dev/null >&2; then
-    CONTAINER_RUNTIME=docker
-else
-    echo No container runtime found, install podman or docker.
-    exit 2
-fi
-
-CONTAINER_IMAGE_CLOUD_TOOLS="quay.io/osbuild/cloud-tools:latest"
 AWS_DEFAULT_REGION=$AWS_REGION
 
 # We need awscli to talk to AWS.
