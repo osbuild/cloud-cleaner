@@ -1,0 +1,26 @@
+name: Run cloud-cleaner
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *' # every hour
+
+jobs:
+  aws-438:
+    name: AWS 438 account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      AWS_REGION: us-east-1
+      V2_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438 }}
+      V2_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438 }}
+      AWS_BUCKET: ${{ secrets.AWS_BUCKET_438 }}
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./aws.sh
