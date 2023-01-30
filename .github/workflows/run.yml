@@ -6,17 +6,17 @@ on:
     - cron: '0 * * * *' # every hour
 
 jobs:
-  aws-438:
-    name: AWS 438 account
+  ib-aws-438:
+    name: Image Builder AWS 438 account
     runs-on: ubuntu-latest
     container:
       image: quay.io/osbuild/cloud-tools:latest
 
     env:
       AWS_REGION: us-east-1
-      V2_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438 }}
-      V2_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438 }}
-      AWS_BUCKET: ${{ secrets.AWS_BUCKET_438 }}
+      V2_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438_IB }}
+      V2_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438_IB }}
+      AWS_BUCKET: ${{ secrets.AWS_BUCKET_438_IB }}
 
     steps:
       - name: Install dependencies
@@ -27,3 +27,64 @@ jobs:
 
       - name: Run the cleaning script
         run: ./aws.sh
+
+  ib-azure:
+    name: Image Builder Azure account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      V2_AZURE_CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID_IB }}"
+      V2_AZURE_CLIENT_SECRET: "${{ secrets.AZURE_CLIENT_SECRET_IB }}"
+      AZURE_TENANT_ID: "${{ secrets.AZURE_TENANT_ID_IB }}"
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./azure.sh
+
+  ib-gcp:
+    name: Image Builder GCP account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_IB }}"
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./gcp.sh
+
+  ib-vmware:
+    name: Image Builder vmware account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      GOVMOMI_USERNAME: ${GOVMOMI_USERNAME_IB}
+      GOVMOMI_PASSWORD: ${GOVMOMI_PASSWORD_IB}
+      GOVMOMI_URL: ${GOVMOMI_URL_IB}
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./vmware.sh
