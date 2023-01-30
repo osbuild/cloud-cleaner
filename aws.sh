@@ -158,6 +158,11 @@ done
 
 # Remove old enough objects that don't have tag persist=true
 echo -e "----------------\nCleaning objects\n----------------"
+
+if [ -z "$AWS_BUCKET" ]; then
+        echo '$AWS_BUCKET is empty, no obejct cleaning will be done'
+        exit 0
+fi
 OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])
 
 for object in ${OBJECTS}; do
