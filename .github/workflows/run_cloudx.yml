@@ -1,0 +1,51 @@
+name: Run cloud-cleaner
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *' # every hour
+
+jobs:
+  cloudx-aws:
+    name: Cloud Experience AWS account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      AWS_REGION: us-east-1
+      V2_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CLOUDX }}
+      V2_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CLOUDX }}
+      #AWS_BUCKET: ${{ secrets.AWS_BUCKET_CLOUDX }} Cloudx doesn't store objects for now
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./aws.sh
+
+  cloudx-azure:
+    name: Cloud Experience Azure account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      V2_AZURE_CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID_CLOUDX }}"
+      V2_AZURE_CLIENT_SECRET: "${{ secrets.AZURE_CLIENT_SECRET_CLOUDX }}"
+      AZURE_TENANT_ID: "${{ secrets.AZURE_TENANT_ID_CLOUDX }}"
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./azure.sh
+        
