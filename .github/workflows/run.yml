@@ -19,6 +19,9 @@ jobs:
       AWS_BUCKET: ${{ secrets.AWS_BUCKET_438 }}
 
     steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
       - name: Check out the repo
         uses: actions/checkout@v3
 
