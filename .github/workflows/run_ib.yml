@@ -66,7 +66,10 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run the cleaning script
-        run: ./gcp.sh
+        run: |
+          echo "${GOOGLE_APPLICATION_CREDENTIALS}" > /tmp/gcp_creds
+          export GOOGLE_APPLICATION_CREDENTIALS="/tmp/gcp_creds"
+          ./gcp.sh
 
   ib-vmware:
     name: Image Builder vmware account
