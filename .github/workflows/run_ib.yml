@@ -1,4 +1,4 @@
-name: Run cloud-cleaner
+name: Run cloud-cleaner Image Builder
 
 on:
   workflow_dispatch:

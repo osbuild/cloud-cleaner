@@ -1,4 +1,4 @@
-name: Run cloud-cleaner
+name: Run cloud-cleaner Cloud Experience
 
 on:
   workflow_dispatch:
@@ -48,4 +48,3 @@ jobs:
 
       - name: Run the cleaning script
         run: ./azure.sh
-        
