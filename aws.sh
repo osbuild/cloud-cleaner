@@ -8,7 +8,6 @@ source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/commo
 #---------------------------------------------------------------
 
 greenprint "Starting aws cleanup"
-AWS_DEFAULT_REGION=$AWS_REGION
 
 # We need awscli to talk to AWS.
 if ! hash aws; then
@@ -27,6 +26,9 @@ if ! hash aws; then
         ${CONTAINER_IMAGE_CLOUD_TOOLS} aws --output json --color on"
 else
     echo "Using pre-installed 'aws' from the system"
+    AWS_ACCESS_KEY_ID=${V2_AWS_ACCESS_KEY_ID}
+    AWS_SECRET_ACCESS_KEY=${V2_AWS_SECRET_ACCESS_KEY}
+    AWS_DEFAULT_REGION=${AWS_REGION}
     AWS_CMD_NO_REGION="aws --output json --color on"
 fi
 $AWS_CMD_NO_REGION --version
