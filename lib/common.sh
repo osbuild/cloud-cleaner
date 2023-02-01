@@ -11,6 +11,8 @@ if [ -z "$COMMON_INCLUDED" ]; then
     HOURS_BACK="${HOURS_BACK:-6}"
     DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 
+    export DRY_RUN="false"
+
     while test $# -gt 0; do
         case "$1" in
         --dry-run)
@@ -27,7 +29,6 @@ if [ -z "$COMMON_INCLUDED" ]; then
             ;;
         *)
             echo "running default cleanup"
-            export DRY_RUN="false"
             break
             ;;
         esac

@@ -31,8 +31,8 @@ else
 fi
 $AWS_CMD_NO_REGION --version
 
-REGIONS=$(${AWS_CMD_NO_REGION} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus == "opt-in-not-required") | .RegionName')
 AWS_CMD="${AWS_CMD_NO_REGION} --region ${AWS_REGION}"
+REGIONS=$(${AWS_CMD} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus == "opt-in-not-required") | .RegionName')
 
 # We use resources in more than one region
 for region in ${REGIONS}; do
