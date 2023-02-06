@@ -78,9 +78,9 @@ jobs:
       image: quay.io/osbuild/cloud-tools:latest
 
     env:
-      GOVMOMI_USERNAME: ${GOVMOMI_USERNAME_IB}
-      GOVMOMI_PASSWORD: ${GOVMOMI_PASSWORD_IB}
-      GOVMOMI_URL: ${GOVMOMI_URL_IB}
+      GOVMOMI_USERNAME: ${{ secrets.GOVMOMI_USERNAME_IB }}
+      GOVMOMI_PASSWORD: ${{ secrets.GOVMOMI_PASSWORD_IB }}
+      GOVMOMI_URL: ${{ secrets.GOVMOMI_URL_IB }}
 
     steps:
       - name: Install dependencies
