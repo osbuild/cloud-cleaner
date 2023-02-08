@@ -14,8 +14,8 @@ jobs:
 
     env:
       AWS_REGION: us-east-1
-      V2_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438_IB }}
-      V2_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438_IB }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438_IB }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438_IB }}
       AWS_BUCKET: ${{ secrets.AWS_BUCKET_438_IB }}
 
     steps:
@@ -35,8 +35,8 @@ jobs:
       image: quay.io/osbuild/cloud-tools:latest
 
     env:
-      V2_AZURE_CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID_IB }}"
-      V2_AZURE_CLIENT_SECRET: "${{ secrets.AZURE_CLIENT_SECRET_IB }}"
+      AZURE_CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID_IB }}"
+      AZURE_CLIENT_SECRET: "${{ secrets.AZURE_CLIENT_SECRET_IB }}"
       AZURE_TENANT_ID: "${{ secrets.AZURE_TENANT_ID_IB }}"
 
     steps:

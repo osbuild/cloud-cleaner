@@ -19,15 +19,13 @@ if ! hash aws; then
     sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
 
     AWS_CMD_NO_REGION="sudo ${CONTAINER_RUNTIME} run --rm \
-        -e AWS_ACCESS_KEY_ID=${V2_AWS_ACCESS_KEY_ID} \
-        -e AWS_SECRET_ACCESS_KEY=${V2_AWS_SECRET_ACCESS_KEY} \
+        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
         -e AWS_DEFAULT_REGION=${AWS_REGION} \
         -v ${TEMPDIR}:${TEMPDIR}:Z \
         ${CONTAINER_IMAGE_CLOUD_TOOLS} aws --output json --color on"
 else
     echo "Using pre-installed 'aws' from the system"
-    export AWS_ACCESS_KEY_ID=${V2_AWS_ACCESS_KEY_ID}
-    export AWS_SECRET_ACCESS_KEY=${V2_AWS_SECRET_ACCESS_KEY}
     export AWS_DEFAULT_REGION=${AWS_REGION}
     AWS_CMD_NO_REGION="aws --output json --color on"
 fi
