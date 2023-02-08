@@ -34,5 +34,7 @@ for vm in $TAGGED; do
     if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
         $GOVC_CMD vm.destroy -u "${GOVC_AUTH}" -k "${vm}"
         echo "destroyed vm: ${vm}"
+    else
+        echo "The instance ${vm} was launched less than ${HOURS_BACK} hours ago"
     fi
 done
