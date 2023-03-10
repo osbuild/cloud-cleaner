@@ -28,8 +28,8 @@ az login --service-principal --username "${AZURE_CLIENT_ID}" --password "${AZURE
 
 #---------------------------------------------------------------
 
-# List all resources from AZURE_RESOURCE_GROUP
-RESOURCE_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP")
+# List all resources
+RESOURCE_LIST=$(az resource list)
 RESOURCE_COUNT=$(echo "$RESOURCE_LIST" | jq .[].name | wc -l)
 
 # Delete resources in a specific order, as dependency on one another might prevent resource deletion
@@ -63,7 +63,7 @@ done
 
 echo -e "-------------------------\nCleaning storage accounts\n-------------------------"
 # Explicitly check the other storage accounts (mostly the api test one)
-STORAGE_ACCOUNT_LIST=$(az resource list -g "$AZURE_RESOURCE_GROUP" --resource-type Microsoft.Storage/storageAccounts | jq -c ".[] | select(.tags.\"persist\" != \"true\")")
+STORAGE_ACCOUNT_LIST=$(az resource list --resource-type Microsoft.Storage/storageAccounts | jq -c ".[] | select(.tags.\"persist\" != \"true\")")
 STORAGE_ACCOUNT_COUNT=$(echo "$STORAGE_ACCOUNT_LIST" | jq -r .name | wc -l)
 for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT" - 1))); do
     STORAGE_ACCOUNT_NAME=$(echo "$STORAGE_ACCOUNT_LIST" | jq -sr .["$i"].name)
