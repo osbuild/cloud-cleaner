@@ -161,7 +161,7 @@ done
 # Remove old enough objects that don't have tag persist=true
 echo -e "----------------\nCleaning objects\n----------------"
 
-if [ -z "$AWS_BUCKET" ]; then
+if [ -z "${AWS_BUCKET:-}" ]; then
         echo '$AWS_BUCKET is empty, no obejct cleaning will be done'
         exit 0
 fi

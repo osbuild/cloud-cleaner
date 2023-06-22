@@ -1,5 +1,5 @@
 # c-inspired include guard to ensure these bits are sourced only once
-if [ -z "$COMMON_INCLUDED" ]; then
+if [ -z "${COMMON_INCLUDED:-}" ]; then
     COMMON_INCLUDED=YES
 
     # Colorful output.
