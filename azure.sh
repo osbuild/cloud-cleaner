@@ -26,7 +26,7 @@ gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.re
     az version
 fi
 
-az login --service-principal --username "${AZURE_CLIENT_ID}" --password "${AZURE_CLIENT_SECRET}" --tenant "${AZURE_TENANT_ID}"
+az login --service-principal --username "${AZURE_CLIENT_ID:-}" --password "${AZURE_CLIENT_SECRET:-}" --tenant "${AZURE_TENANT_ID:-}"
 
 #---------------------------------------------------------------
 
