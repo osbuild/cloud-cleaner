@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # include the common library
 source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh
 
