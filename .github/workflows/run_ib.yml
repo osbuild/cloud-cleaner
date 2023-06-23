@@ -72,22 +72,11 @@ jobs:
           ./gcp.sh
 
   ib-vmware:
+    # always skip b/c GOVMOMI_URL_IB is not reachable outside VPN, see
+    # https://gitlab.cee.redhat.com/osbuild/vcenter-cleaner
+    if: ${{ ! always() }}
     name: Image Builder vmware account
     runs-on: ubuntu-latest
-    container:
-      image: quay.io/osbuild/cloud-tools:latest
-
-    env:
-      GOVMOMI_USERNAME: ${{ secrets.GOVMOMI_USERNAME_IB }}
-      GOVMOMI_PASSWORD: ${{ secrets.GOVMOMI_PASSWORD_IB }}
-      GOVMOMI_URL: ${{ secrets.GOVMOMI_URL_IB }}
-
     steps:
-      - name: Install dependencies
-        run: dnf install -y jq
-
-      - name: Check out the repo
-        uses: actions/checkout@v3
-
-      - name: Run the cleaning script
-        run: ./vmware.sh
+      - name: This workflow is internal only
+        run: echo
