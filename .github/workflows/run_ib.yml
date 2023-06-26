@@ -28,6 +28,27 @@ jobs:
       - name: Run the cleaning script
         run: ./aws.sh
 
+  ib-aws-stage:
+    name: Image Builder AWS Stage account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_STAGE_IB }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGE_IB }}
+      AWS_BUCKET: ${{ secrets.AWS_BUCKET_STAGE_IB }}
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./aws.sh
+
   ib-azure:
     name: Image Builder Azure account
     runs-on: ubuntu-latest
