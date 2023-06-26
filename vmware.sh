@@ -17,10 +17,10 @@ GOVC_CMD=/tmp/govc
 if ! hash govc; then
     greenprint "Installing govc"
     pushd /tmp || exit
-    curl -Ls --retry 5 --output govc.gz \
-        https://github.com/vmware/govmomi/releases/download/v0.24.0/govc_linux_amd64.gz
-    gunzip -f govc.gz
-    chmod +x /tmp/govc
+    curl -Ls --retry 5 --output govc.tar.gz \
+        https://github.com/vmware/govmomi/releases/download/v0.30.4/govc_Linux_x86_64.tar.gz
+    tar -xzvf govc.tar.gz
+    chmod +x ./govc
     $GOVC_CMD version
     popd || exit
 fi
