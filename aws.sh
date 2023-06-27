@@ -82,6 +82,7 @@ for region in ${REGIONS}; do
     # Remove old enough images that don't have tag persist=true
     echo -e "---------------\nCleaning images\n---------------"
     IMAGES=$(${AWS_CMD} ec2 describe-images --owner self | tr -d "[:space:]" | jq -c '.Images[]')
+    PERSISTENT_SNAPSHOTS=""
 
     for image in ${IMAGES}; do
         REMOVE=1
@@ -104,6 +105,8 @@ for region in ${REGIONS}; do
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
                     echo "The image with id ${IMAGE_ID} has tag 'persist=true'"
+                    IMAGE_SNAPSHOT=$(echo "${image}" | jq -rc 'try .BlockDeviceMappings[0].Ebs.SnapshotId')
+                    PERSISTENT_SNAPSHOTS="$PERSISTENT_SNAPSHOTS $IMAGE_SNAPSHOT"
                 fi
             done
         fi
@@ -145,6 +148,11 @@ for region in ${REGIONS}; do
                     echo "The snapshot with id ${SNAPSHOT_ID} has tag 'persist=true'"
                 fi
             done
+        fi
+
+        if [[ "${PERSISTENT_SNAPSHOTS}" =~ "${SNAPSHOT_ID}" ]]; then
+            echo "Skipping snaphshot ${SNAPSHOT_ID} b/c it is used by persistent AMI"
+            REMOVE=0
         fi
 
         if [ ${REMOVE} == 1 ]; then
