@@ -27,9 +27,9 @@ $OCI_CMD setup repair-file-permissions --file "${TEMPDIR}/priv_key.pem"
 $OCI_CMD setup repair-file-permissions --file "$OCI_CONFIG"
 
 greenprint "🧹 cleaning up instances"
-INSTANCES=$("$OCI_CMD" compute instance list -c "$OCI_COMPARTMENT" | jq -r ".data[].id")
+INSTANCES=$($OCI_CMD compute instance list -c "$OCI_COMPARTMENT" | jq -r ".data[].id")
 for i in "$INSTANCES"; do
-    INSTANCE_DATA=$("$OCI_CMD" compute instance get --instance-id "$id" | jq -r ".data")
+    INSTANCE_DATA=$($OCI_CMD compute instance get --instance-id "$id" | jq -r ".data")
 
     if [[ $(echo "$INSTANCE_DATA" | jq -r '.["freeform-tags"].persist') = true ]]; then
         echo "Instance $i is tagged with persist=true"
@@ -48,13 +48,13 @@ for i in "$INSTANCES"; do
     fi
 
     echo "Terminating instance $i"
-    "$OCI_CMD" compute instance terminate --force --instance-id "$i"
+    $OCI_CMD compute instance terminate --force --instance-id "$i"
 done
 
 greenprint "🧹 cleaning up images"
-IMAGES=$("$OCI_CMD" compute image list -c "$OCI_COMPARTMENT" --all | jq -r ".data[] | select(.[\"compartment-id\"] == \"$OCI_COMPARTMENT\").id")
+IMAGES=$($OCI_CMD compute image list -c "$OCI_COMPARTMENT" --all | jq -r ".data[] | select(.[\"compartment-id\"] == \"$OCI_COMPARTMENT\").id")
 for i in "$IMAGES"; do
-    IMAGE_DATA=$("$OCI_CMD" compute image get --image-id "$i" | jq -r ".data")
+    IMAGE_DATA=$($OCI_CMD compute image get --image-id "$i" | jq -r ".data")
 
     if [[ $(echo "$IMAGE_DATA" | jq -r '.["freeform-tags"].persist') = true ]]; then
         echo "Image $i is tagged with persist=true"
@@ -73,7 +73,7 @@ for i in "$IMAGES"; do
     fi
 
     echo "Deleting image $i"
-    "$OCI_CMD" compute image delete --force --image-id "$i"
+    $OCI_CMD compute image delete --force --image-id "$i"
 done
 
 greenprint "🔮☁ Finished OCI cleanup"
