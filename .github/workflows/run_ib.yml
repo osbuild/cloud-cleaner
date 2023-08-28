@@ -71,6 +71,27 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="/tmp/gcp_creds"
           ./gcp.sh
 
+  ib-oci:
+    name: Image Builder OCI account
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      OCI_CONFIG_DATA: "${{ secrets.OCI_CONFIG_DATA }}"
+      OCI_PRIV_KEY_DATA: "${{ secrets.OCI_PRIV_KEY_DATA }}"
+      OCI_COMPARTMENT: "${{ secrets.OCI_COMPARTMENT }}"
+
+    steps:
+      - name: Install dependencies
+        run: dnf install -y jq
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Run the cleaning script
+        run: ./oci.sh
+
   ib-vmware:
     # always skip b/c GOVMOMI_URL_IB is not reachable outside VPN, see
     # https://gitlab.cee.redhat.com/osbuild/vcenter-cleaner
