@@ -38,7 +38,7 @@ for i in $INSTANCES; do
 
     TIME_CREATED=$(echo "$INSTANCE_DATA" | jq -r '.["time-created"]')
     if [[ $(date -d "$TIME_CREATED" +%s) -gt "$DELETE_TIME" ]]; then
-        echo "Instance $i was created less than $DELETE_TIME hours ago"
+        echo "Instance $i was created less than $HOURS_BACK hours ago"
         continue
     fi
 
@@ -68,7 +68,7 @@ for i in $IMAGES; do
 
     TIME_CREATED=$(echo "$IMAGE_DATA" | jq -r '.["time-created"]')
     if [[ $(date -d "$TIME_CREATED" +%s) -gt "$DELETE_TIME" ]]; then
-        echo "IMAGE $i was created less than $DELETE_TIME hours ago"
+        echo "IMAGE $i was created less than $HOURS_BACK hours ago"
         continue
     fi
 
