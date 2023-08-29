@@ -36,14 +36,14 @@ for i in $INSTANCES; do
         continue
     fi
 
-    TIME_CREATED=$(echo "$INSTANCE_DATA" | jq -r '.["time-created"]')
-    if [[ $(date -d "$TIME_CREATED" +%s) -gt "$DELETE_TIME" ]]; then
-        echo "Instance $i was created less than $HOURS_BACK hours ago"
+    if [[ $(echo "$INSTANCE_DATA" | jq -r '.["lifecycle-state"]') = TERMINATED ]]; then
+        echo "Instance $i already terminated"
         continue
     fi
 
-    if [[ $(echo "$INSTANCE_DATA" | jq -r '.["lifecycle-state"]') = TERMINATED ]]; then
-        echo "Instance $i already terminated"
+    TIME_CREATED=$(echo "$INSTANCE_DATA" | jq -r '.["time-created"]')
+    if [[ $(date -d "$TIME_CREATED" +%s) -gt "$DELETE_TIME" ]]; then
+        echo "Instance $i was created less than $HOURS_BACK hours ago"
         continue
     fi
 
