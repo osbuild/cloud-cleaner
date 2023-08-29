@@ -11,7 +11,7 @@ source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/commo
 
 greenprint "🔮☁ Starting OCI cleanup"
 
-if ! hash /root/bin/oci; then
+if ! hash oci && [ ! -e /root/bin/oci ]; then
     echo 'no oci cli, cannot proceed'
     exit 1
 fi
