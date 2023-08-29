@@ -28,7 +28,7 @@ $OCI_CMD setup repair-file-permissions --file "$OCI_CONFIG"
 
 greenprint "🧹 cleaning up instances"
 INSTANCES=$($OCI_CMD compute instance list -c "$OCI_COMPARTMENT" | jq -r ".data[].id")
-for i in "$INSTANCES"; do
+for i in $INSTANCES; do
     INSTANCE_DATA=$($OCI_CMD compute instance get --instance-id "$i" | jq -r ".data")
 
     if [[ $(echo "$INSTANCE_DATA" | jq -r '.["freeform-tags"].persist') = true ]]; then
@@ -53,7 +53,7 @@ done
 
 greenprint "🧹 cleaning up images"
 IMAGES=$($OCI_CMD compute image list -c "$OCI_COMPARTMENT" --all | jq -r ".data[] | select(.[\"compartment-id\"] == \"$OCI_COMPARTMENT\").id")
-for i in "$IMAGES"; do
+for i in $IMAGES; do
     IMAGE_DATA=$($OCI_CMD compute image get --image-id "$i" | jq -r ".data")
 
     if [[ $(echo "$IMAGE_DATA" | jq -r '.["freeform-tags"].persist') = true ]]; then
