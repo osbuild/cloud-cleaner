@@ -29,7 +29,7 @@ $OCI_CMD setup repair-file-permissions --file "$OCI_CONFIG"
 greenprint "🧹 cleaning up instances"
 INSTANCES=$($OCI_CMD compute instance list -c "$OCI_COMPARTMENT" | jq -r ".data[].id")
 for i in "$INSTANCES"; do
-    INSTANCE_DATA=$($OCI_CMD compute instance get --instance-id "$id" | jq -r ".data")
+    INSTANCE_DATA=$($OCI_CMD compute instance get --instance-id "$i" | jq -r ".data")
 
     if [[ $(echo "$INSTANCE_DATA" | jq -r '.["freeform-tags"].persist') = true ]]; then
         echo "Instance $i is tagged with persist=true"
