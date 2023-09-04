@@ -2,12 +2,19 @@
 if [ -z "${COMMON_INCLUDED:-}" ]; then
     COMMON_INCLUDED=YES
 
-    # Colorful output.
+    # Console print with dashes as separator
+    function print_separator {
+      text="$1"
+
+      echo -e "--------------------\n${text}\n--------------------"
+    }
+
+    # Colorful output
     function greenprint {
         echo -e "\033[1;32m[$(date -Isecond)] ${1}\033[0m"
     }
 
-    # filter out resources older than X hours
+    # Filter out resources older than X hours
     HOURS_BACK="${HOURS_BACK:-6}"
     DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 

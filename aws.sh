@@ -18,7 +18,7 @@ if ! hash aws; then
         exit 2
     fi
     echo "Using 'awscli' from a container"
-    sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
+    sudo "${CONTAINER_RUNTIME}" pull "${CONTAINER_IMAGE_CLOUD_TOOLS}"
 
     AWS_CMD_NO_REGION="sudo ${CONTAINER_RUNTIME} run --rm \
         -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
@@ -41,7 +41,8 @@ for region in ${REGIONS}; do
     AWS_CMD="${AWS_CMD_NO_REGION} --region ${region}"
     greenprint "Cleaning ${region}"
     # Remove old enough instances that don't have tag persist=true
-    echo -e "------------------\nCleaning instances\n------------------"
+    print_separator 'Cleaning instances...'
+
     INSTANCES=$(${AWS_CMD} ec2 describe-instances | tr -d "[:space:]" | jq -c '.Reservations[].Instances[]')
 
     for instance in ${INSTANCES}; do
@@ -54,13 +55,13 @@ for region in ${REGIONS}; do
             echo "The instance with id ${INSTANCE_ID} was launched less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${instance} | jq 'has("Tags")')
+        HAS_TAGS=$(echo "${instance}" | jq 'has("Tags")')
         if [ ${HAS_TAGS} = true ]; then
             TAGS=$(echo "${instance}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                KEY=$(echo ${tag} | jq -r '.Key')
-                VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo "${tag}" | jq -r '.Key')
+                VALUE=$(echo "${tag}" | jq -r '.Value')
 
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
@@ -70,7 +71,7 @@ for region in ${REGIONS}; do
         fi
 
         if [ ${REMOVE} == 1 ]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "The instance with id ${INSTANCE_ID} would get terminated"
             else
                 $AWS_CMD ec2 terminate-instances --instance-id "${INSTANCE_ID}"
@@ -80,7 +81,8 @@ for region in ${REGIONS}; do
     done
 
     # Remove old enough images that don't have tag persist=true
-    echo -e "---------------\nCleaning images\n---------------"
+    print_separator 'Cleaning images...'
+
     IMAGES=$(${AWS_CMD} ec2 describe-images --owner self | tr -d "[:space:]" | jq -c '.Images[]')
     PERSISTENT_SNAPSHOTS=""
 
@@ -94,13 +96,13 @@ for region in ${REGIONS}; do
             echo "The image with id ${IMAGE_ID} was created less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${image} | jq 'has("Tags")')
+        HAS_TAGS=$(echo "${image}" | jq 'has("Tags")')
         if [ ${HAS_TAGS} = true ]; then
             TAGS=$(echo "${image}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                KEY=$(echo ${tag} | jq -r '.Key')
-                VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo "${tag}" | jq -r '.Key')
+                VALUE=$(echo "${tag}" | jq -r '.Value')
 
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
@@ -112,7 +114,7 @@ for region in ${REGIONS}; do
         fi
 
         if [ ${REMOVE} == 1 ]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "The image with id ${IMAGE_ID} would get deregistered"
             else
                 $AWS_CMD ec2 deregister-image --image-id "${IMAGE_ID}"
@@ -122,7 +124,8 @@ for region in ${REGIONS}; do
     done
 
     # Remove old enough snapshots that don't have tag persist=true
-    echo -e "------------------\nCleaning snapshots\n------------------"
+    print_separator 'Cleaning snapshots...'
+
     SNAPSHOTS=$(${AWS_CMD} ec2 describe-snapshots --owner self | tr -d "[:space:]" | jq -c '.Snapshots[]')
 
     for snapshot in ${SNAPSHOTS}; do
@@ -135,13 +138,13 @@ for region in ${REGIONS}; do
             echo "The snapshot with id ${SNAPSHOT_ID} was created less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${snapshot} | jq 'has("Tags")')
+        HAS_TAGS=$(echo "${snapshot}" | jq 'has("Tags")')
         if [ ${HAS_TAGS} = true ]; then
             TAGS=$(echo "${snapshot}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                KEY=$(echo ${tag} | jq -r '.Key')
-                VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo "${tag}" | jq -r '.Key')
+                VALUE=$(echo "${tag}" | jq -r '.Value')
 
                 if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
                     REMOVE=0
@@ -156,7 +159,7 @@ for region in ${REGIONS}; do
         fi
 
         if [ ${REMOVE} == 1 ]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "The snapshot with id ${SNAPSHOT_ID} would get deleted"
             else
                 $AWS_CMD ec2 delete-snapshot --snapshot-id "${SNAPSHOT_ID}"
@@ -167,11 +170,11 @@ for region in ${REGIONS}; do
 done
 
 # Remove old enough objects that don't have tag persist=true
-echo -e "----------------\nCleaning objects\n----------------"
+print_separator 'Cleaning objects...'
 
 if [ -z "${AWS_BUCKET:-}" ]; then
-        echo '$AWS_BUCKET is empty, no obejct cleaning will be done'
-        exit 0
+    echo "$AWS_BUCKET is empty, no object cleaning will be done"
+    exit 0
 fi
 OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])
 
@@ -187,8 +190,8 @@ for object in ${OBJECTS}; do
 
     TAGS=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -c .TagSet[])
     for tag in ${TAGS}; do
-        KEY=$(echo ${tag} | jq -r '.Key')
-        VALUE=$(echo ${tag} | jq -r '.Value')
+        KEY=$(echo "${tag}" | jq -r '.Key')
+        VALUE=$(echo "${tag}" | jq -r '.Value')
 
         if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
             REMOVE=0
@@ -197,7 +200,7 @@ for object in ${OBJECTS}; do
     done
 
     if [ ${REMOVE} == 1 ]; then
-        if [ $DRY_RUN == "true" ]; then
+        if [ "$DRY_RUN" == "true" ]; then
             echo "The object with key ${OBJECT_KEY} would get removed"
         else
             $AWS_CMD s3 rm "s3://${AWS_BUCKET}/${OBJECT_KEY}"
