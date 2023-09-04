@@ -117,6 +117,90 @@ function cleanup_az_storage_accounts {
     done
 }
 
+function cleanup_az_image_galleries {
+    IFS=$'\n'
+
+    print_separator 'Cleaning image galleries...'
+
+    IMG_GALLERIES_LIST="$(az sig list | jq -c ".[] | select(length > 0 and .tags.\"persist\" != \"true\")")"
+
+    # Loop over all images galleries found in all the resource groups from the AZ subscription
+    for gallery in ${IMG_GALLERIES_LIST[@]}; do
+        img_definitions_deleted=0
+
+        IMG_GALLERY_NAME="$(echo "$gallery" | jq -r .name)"
+        RESOURCE_GROUP_NAME="$(echo "$gallery" | jq -r .resourceGroup)"
+
+        IMG_DEFS_LIST="$(az sig image-definition list \
+                             --resource-group "$RESOURCE_GROUP_NAME" \
+                             --gallery-name "$IMG_GALLERY_NAME" | \
+                                 jq -c ".[] | select(length > 0 and .tags.\"persist\" != \"true\")")"
+
+        # Loop over all image definitions of each image gallery
+        for img_definition in ${IMG_DEFS_LIST[@]}; do
+            img_versions_deleted=0
+
+            IMG_DEF_NAME="$(echo "$img_definition" | jq -r .name)"
+
+            IMG_VERSIONS_LIST="$(az sig image-version list \
+                                     --resource-group "$RESOURCE_GROUP_NAME" \
+                                     --gallery-name "$IMG_GALLERY_NAME" \
+                                     --gallery-image-definition "$IMG_DEF_NAME" | \
+                                         jq -c ".[] | select(length > 0 and .tags.\"persist\" != \"true\")")"
+
+            # Loop over all image versions of each image definition to check if they have to be deleted
+            for img_version in ${IMG_VERSIONS_LIST[@]}; do
+                IMG_VERSION_NAME="$(echo "$img_version" | jq -r .name)"
+
+                IMG_VERSION_PUBLISH_DATE="$(echo "$img_version" | jq -r .publishingProfile.publishedDate)"
+                IMG_VERSION_PUBLISH_TIME_SECONDS=$(date -d "$IMG_VERSION_PUBLISH_DATE" +%s)
+
+                if [[ "$IMG_VERSION_PUBLISH_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
+                    if [ "$DRY_RUN" == 'true' ]; then
+                        echo "Image version $IMG_VERSION_NAME would be deleted"
+                    else
+                        az sig image-version delete \
+                            --resource-group "$RESOURCE_GROUP_NAME" \
+                            --gallery-name "$IMG_GALLERY_NAME" \
+                            --gallery-image-definition "$IMG_DEF_NAME" \
+                            --gallery-image-version "$IMG_VERSION_NAME"
+                        echo "Deleted image version $IMG_VERSION_NAME"
+                    fi
+
+                    ((img_versions_deleted++))
+                fi
+            done
+
+            # If all image versions were deleted, then delete the image definition where they belonged
+            if [ "$img_versions_deleted" == "${#IMG_VERSIONS_LIST[@]}" ]; then
+                if [ "$DRY_RUN" == 'true' ]; then
+                    echo "Image definition $IMG_DEF_NAME would be deleted"
+                else
+                    az sig image-definition delete \
+                        --resource-group "$RESOURCE_GROUP_NAME" \
+                        --gallery-name "$IMG_GALLERY_NAME" \
+                        --gallery-image-definition "$IMG_DEF_NAME"
+                    echo "Deleted image definition $IMG_DEF_NAME"
+                fi
+
+                ((img_definitions_deleted++))
+            fi
+        done
+
+        # If all image definitions were deleted, then delete the image gallery where they belonged
+        if [ "$img_definitions_deleted" == "${#IMG_DEFS_LIST[@]}" ]; then
+            if [ "$DRY_RUN" == 'true' ]; then
+                echo "Image gallery $IMG_GALLERY_NAME would be deleted"
+            else
+                az sig delete \
+                    --resource-group "$RESOURCE_GROUP_NAME" \
+                    --gallery-name "$IMG_GALLERY_NAME"
+                echo "Deleted image gallery $IMG_GALLERY_NAME"
+            fi
+        fi
+    done
+}
+
 # Main script flow
 function main {
     greenprint 'Starting azure cleanup'
@@ -127,6 +211,7 @@ function main {
 
     cleanup_az_resources
     cleanup_az_storage_accounts
+    cleanup_az_image_galleries
 }
 
 #---------------------------------------------------------------
