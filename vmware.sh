@@ -9,13 +9,13 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/comm
 #                       vmware cleanup
 #---------------------------------------------------------------
 
-greenprint "starting vmware cleanup"
+greenprint 'Starting vmware cleanup'
 
 GOVC_CMD=/tmp/govc
 
 # We need govc to talk to vSphere
 if ! hash govc; then
-    greenprint "Installing govc"
+    greenprint 'Installing govc'
     pushd /tmp || exit
     curl -Ls --retry 5 --output govc.tar.gz \
         https://github.com/vmware/govmomi/releases/download/v0.30.4/govc_Linux_x86_64.tar.gz
@@ -35,7 +35,7 @@ for vm in $TAGGED; do
 
     if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
         $GOVC_CMD vm.destroy -u "${GOVC_AUTH}" -k "${vm}"
-        echo "destroyed vm: ${vm}"
+        echo "Destroyed vm: ${vm}"
     else
         echo "The instance ${vm} was launched less than ${HOURS_BACK} hours ago"
     fi
