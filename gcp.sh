@@ -11,10 +11,10 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/comm
 
 greenprint "starting gcp cleanup"
 
-# We need Google Gloud SDK to comunicate with gcp
+# We need Google GCloud SDK to communicate with gcp
 if ! hash gcloud; then
     if [ -z "$CONTAINER_RUNTIME" ]; then
-        echo 'no gcloud cli, nor container runtime available, cannot proceed'
+        echo 'No gcloud cli, nor container runtime available, cannot proceed'
         exit 2
     fi
     echo "Using 'gcloud' from a container"
@@ -41,8 +41,8 @@ $GCP_CMD auth activate-service-account --key-file "$GOOGLE_APPLICATION_CREDENTIA
 GCP_PROJECT=$(jq -r '.project_id' "$GOOGLE_APPLICATION_CREDENTIALS")
 $GCP_CMD config set project "$GCP_PROJECT"
 
-# List tagged intances and remove the old enough ones
-echo -e "------------------\nCleaning instances\n------------------"
+# List tagged instances and remove the old enough ones
+print_separator 'Cleaning instances...'
 INSTANCES=$($GCP_CMD compute instances list --filter='NOT labels.persist:true AND NOT tags.persist:true' |
     jq -c '.[] | {"name": .name, "creationTimestamp": .creationTimestamp, "zone": .zone}')
 
@@ -56,13 +56,13 @@ for instance in ${INSTANCES}; do
             echo "instance ${NAME} would get deleted."
         else
             $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
-            echo "deleted instance: ${NAME}"
+            echo "Deleted instance: ${NAME}"
         fi
     fi
 done
 
 # List tagged images and remove the old enough ones
-echo -e "---------------\nCleaning images\n---------------"
+print_separator 'Cleaning images...'
 IMAGES=$($GCP_CMD compute images list --filter='NOT labels.persist:true' |
     jq -c '.[] | select(.selfLink|contains("cockpituous")) | {"name": .name, "creationTimestamp": .creationTimestamp}')
 
@@ -75,7 +75,7 @@ for image in $IMAGES; do
             echo "image ${NAME} would get deleted."
         else
             $GCP_CMD compute images delete "$NAME"
-            echo "deleted image: ${NAME}"
+            echo "Deleted image: ${NAME}"
         fi
     fi
 done

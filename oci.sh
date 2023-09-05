@@ -12,7 +12,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/comm
 greenprint "🔮☁ Starting OCI cleanup"
 
 if ! hash oci && [ ! -e /root/bin/oci ]; then
-    echo 'no oci cli, cannot proceed'
+    echo 'No oci cli, cannot proceed'
     exit 1
 fi
 
@@ -26,7 +26,7 @@ $OCI_CMD --version
 $OCI_CMD setup repair-file-permissions --file "${TEMPDIR}/priv_key.pem"
 $OCI_CMD setup repair-file-permissions --file "$OCI_CONFIG"
 
-greenprint "🧹 cleaning up instances"
+greenprint "🧹 Cleaning up instances"
 INSTANCES=$($OCI_CMD compute instance list -c "$OCI_COMPARTMENT" | jq -r ".data[].id")
 for i in $INSTANCES; do
     INSTANCE_DATA=$($OCI_CMD compute instance get --instance-id "$i" | jq -r ".data")
@@ -56,7 +56,7 @@ for i in $INSTANCES; do
     $OCI_CMD compute instance terminate --force --instance-id "$i"
 done
 
-greenprint "🧹 cleaning up images"
+greenprint "🧹 Cleaning up images"
 IMAGES=$($OCI_CMD compute image list -c "$OCI_COMPARTMENT" --all | jq -r ".data[] | select(.[\"compartment-id\"] == \"$OCI_COMPARTMENT\").id")
 for i in $IMAGES; do
     IMAGE_DATA=$($OCI_CMD compute image get --image-id "$i" | jq -r ".data")
