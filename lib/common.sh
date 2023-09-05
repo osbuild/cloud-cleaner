@@ -4,34 +4,41 @@
 if [ -z "${COMMON_INCLUDED:-}" ]; then
     COMMON_INCLUDED=YES
 
-    # Colorful output.
+    # Console print with dashes as separator
+    function print_separator {
+      text="$1"
+
+      echo -e "--------------------\n${text}\n--------------------"
+    }
+
+    # Colorful output
     function greenprint {
         echo -e "\033[1;32m[$(date -Isecond)] ${1}\033[0m"
     }
 
-    # filter out resources older than X hours
+    # Filter out resources older than X hours
     HOURS_BACK="${HOURS_BACK:-6}"
     # shellcheck disable=SC2034
     DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 
-    export DRY_RUN="false"
+    export DRY_RUN='false'
 
     while test $# -gt 0; do
         case "$1" in
         --dry-run)
-            echo "Dry run mode is enabled"
-            export DRY_RUN="true"
+            echo 'Dry run mode is enabled'
+            export DRY_RUN='true'
             shift
             ;;
         -h | --help)
-            echo "Cloud Cleaner is a small program to remove unused resources from the cloud"
-            echo "options:"
-            echo "-h, --help        show brief help"
-            echo "--dry-run         show which resources would get removed without doing so"
+            echo 'Cloud Cleaner is a small program to remove unused resources from the cloud'
+            echo 'options:'
+            echo '-h, --help        show brief help'
+            echo '--dry-run         show which resources would get removed without doing so'
             exit
             ;;
         *)
-            echo "running default cleanup"
+            echo 'Running default cleanup'
             break
             ;;
         esac
