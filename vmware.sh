@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # include the common library
-source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh"
 
 #---------------------------------------------------------------
 #                       vmware cleanup
