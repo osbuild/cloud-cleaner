@@ -32,7 +32,6 @@ az login --service-principal --username "${AZURE_CLIENT_ID:-}" --password "${AZU
 
 # List all resources
 RESOURCE_LIST=$(az resource list)
-RESOURCE_COUNT=$(echo "$RESOURCE_LIST" | jq .[].name | wc -l)
 
 # Delete resources in a specific order, as dependency on one another might prevent resource deletion
 RESOURCE_TYPES=(
