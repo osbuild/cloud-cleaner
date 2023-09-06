@@ -11,6 +11,7 @@ if [ -z "${COMMON_INCLUDED:-}" ]; then
 
     # filter out resources older than X hours
     HOURS_BACK="${HOURS_BACK:-6}"
+    # shellcheck disable=SC2034
     DELETE_TIME=$(date -d "- $HOURS_BACK hours" +%s)
 
     export DRY_RUN="false"
@@ -44,10 +45,13 @@ if [ -z "${COMMON_INCLUDED:-}" ]; then
 
     # Check available container runtime
     if which podman 2>/dev/null >&2; then
+        # shellcheck disable=SC2034
         CONTAINER_RUNTIME=podman
     elif which docker 2>/dev/null >&2; then
+        # shellcheck disable=SC2034
         CONTAINER_RUNTIME=docker
     fi
 
+    # shellcheck disable=SC2034
     CONTAINER_IMAGE_CLOUD_TOOLS="quay.io/osbuild/cloud-tools:latest"
 fi
