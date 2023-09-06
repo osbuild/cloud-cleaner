@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # include the common library
-source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh"
 
 #---------------------------------------------------------------
 # 			AWS cleanup
@@ -18,7 +18,7 @@ if ! hash aws; then
         exit 2
     fi
     echo "Using 'awscli' from a container"
-    sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
+    sudo "${CONTAINER_RUNTIME}" pull "${CONTAINER_IMAGE_CLOUD_TOOLS}"
 
     AWS_CMD_NO_REGION="sudo ${CONTAINER_RUNTIME} run --rm \
         -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
@@ -54,15 +54,15 @@ for region in ${REGIONS}; do
             echo "The instance with id ${INSTANCE_ID} was launched less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${instance} | jq 'has("Tags")')
-        if [ ${HAS_TAGS} = true ]; then
+        HAS_TAGS="$(echo "${instance}" | jq 'has("Tags")')"
+        if [ "${HAS_TAGS}" = true ]; then
             TAGS=$(echo "${instance}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                KEY=$(echo ${tag} | jq -r '.Key')
-                VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY="$(echo "${tag}" | jq -r '.Key')"
+                VALUE="$(echo "${tag}" | jq -r '.Value')"
 
-                if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+                if [[ "${KEY}" == "persist" && "${VALUE}" == "true" ]]; then
                     REMOVE=0
                     echo "The instance with id ${INSTANCE_ID} has tag 'persist=true'"
                 fi
@@ -70,7 +70,7 @@ for region in ${REGIONS}; do
         fi
 
         if [ ${REMOVE} == 1 ]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "The instance with id ${INSTANCE_ID} would get terminated"
             else
                 $AWS_CMD ec2 terminate-instances --instance-id "${INSTANCE_ID}"
@@ -94,15 +94,15 @@ for region in ${REGIONS}; do
             echo "The image with id ${IMAGE_ID} was created less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${image} | jq 'has("Tags")')
-        if [ ${HAS_TAGS} = true ]; then
+        HAS_TAGS=$(echo "${image}" | jq 'has("Tags")')
+        if [ "${HAS_TAGS}" == "true" ]; then
             TAGS=$(echo "${image}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                KEY=$(echo ${tag} | jq -r '.Key')
-                VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo "${tag}" | jq -r '.Key')
+                VALUE=$(echo "${tag}" | jq -r '.Value')
 
-                if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+                if [[ "${KEY}" == "persist" && "${VALUE}" == "true" ]]; then
                     REMOVE=0
                     echo "The image with id ${IMAGE_ID} has tag 'persist=true'"
                     IMAGE_SNAPSHOT=$(echo "${image}" | jq -rc 'try .BlockDeviceMappings[0].Ebs.SnapshotId')
@@ -112,7 +112,7 @@ for region in ${REGIONS}; do
         fi
 
         if [ ${REMOVE} == 1 ]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "The image with id ${IMAGE_ID} would get deregistered"
             else
                 $AWS_CMD ec2 deregister-image --image-id "${IMAGE_ID}"
@@ -135,28 +135,28 @@ for region in ${REGIONS}; do
             echo "The snapshot with id ${SNAPSHOT_ID} was created less than ${HOURS_BACK} hours ago"
         fi
 
-        HAS_TAGS=$(echo ${snapshot} | jq 'has("Tags")')
-        if [ ${HAS_TAGS} = true ]; then
+        HAS_TAGS=$(echo "${snapshot}" | jq 'has("Tags")')
+        if [ "${HAS_TAGS}" == "true" ]; then
             TAGS=$(echo "${snapshot}" | jq -c 'try .Tags[]')
 
             for tag in ${TAGS}; do
-                KEY=$(echo ${tag} | jq -r '.Key')
-                VALUE=$(echo ${tag} | jq -r '.Value')
+                KEY=$(echo "${tag}" | jq -r '.Key')
+                VALUE=$(echo "${tag}" | jq -r '.Value')
 
-                if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
+                if [[ "${KEY}" == "persist" && "${VALUE}" == "true" ]]; then
                     REMOVE=0
                     echo "The snapshot with id ${SNAPSHOT_ID} has tag 'persist=true'"
                 fi
             done
         fi
 
-        if [[ "${PERSISTENT_SNAPSHOTS}" =~ "${SNAPSHOT_ID}" ]]; then
+        if [[ "${PERSISTENT_SNAPSHOTS}" =~ ${SNAPSHOT_ID} ]]; then
             echo "Skipping snaphshot ${SNAPSHOT_ID} b/c it is used by persistent AMI"
             REMOVE=0
         fi
 
         if [ ${REMOVE} == 1 ]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "The snapshot with id ${SNAPSHOT_ID} would get deleted"
             else
                 $AWS_CMD ec2 delete-snapshot --snapshot-id "${SNAPSHOT_ID}"
@@ -170,7 +170,7 @@ done
 echo -e "----------------\nCleaning objects\n----------------"
 
 if [ -z "${AWS_BUCKET:-}" ]; then
-        echo '$AWS_BUCKET is empty, no obejct cleaning will be done'
+        echo "\$AWS_BUCKET is empty, no obejct cleaning will be done"
         exit 0
 fi
 OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])
@@ -187,8 +187,8 @@ for object in ${OBJECTS}; do
 
     TAGS=$($AWS_CMD s3api get-object-tagging --bucket "${AWS_BUCKET}" --key "${OBJECT_KEY}" | jq -c .TagSet[])
     for tag in ${TAGS}; do
-        KEY=$(echo ${tag} | jq -r '.Key')
-        VALUE=$(echo ${tag} | jq -r '.Value')
+        KEY=$(echo "${tag}" | jq -r '.Key')
+        VALUE=$(echo "${tag}" | jq -r '.Value')
 
         if [[ ${KEY} == "persist" && ${VALUE} == "true" ]]; then
             REMOVE=0
@@ -197,7 +197,7 @@ for object in ${OBJECTS}; do
     done
 
     if [ ${REMOVE} == 1 ]; then
-        if [ $DRY_RUN == "true" ]; then
+        if [ "$DRY_RUN" == "true" ]; then
             echo "The object with key ${OBJECT_KEY} would get removed"
         else
             $AWS_CMD s3 rm "s3://${AWS_BUCKET}/${OBJECT_KEY}"

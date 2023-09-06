@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # include the common library
-source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh"
 
 #---------------------------------------------------------------
 #                       GCP cleanup
@@ -18,7 +18,7 @@ if ! hash gcloud; then
         exit 2
     fi
     echo "Using 'gcloud' from a container"
-    sudo ${CONTAINER_RUNTIME} pull ${CONTAINER_IMAGE_CLOUD_TOOLS}
+    sudo "${CONTAINER_RUNTIME}" pull "${CONTAINER_IMAGE_CLOUD_TOOLS}"
 
     # directory mounted to the container, in which gcloud stores the credentials after logging in
     GCP_CMD_CREDS_DIR="${TEMPDIR}/gcloud_credentials"
@@ -52,7 +52,7 @@ for instance in ${INSTANCES}; do
     if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
         ZONE=$(echo "${instance}" | jq -r '.zone' | awk -F / '{print $NF}')
         NAME=$(echo "${instance}" | jq -r '.name')
-        if [ $DRY_RUN == "true" ]; then
+        if [ "$DRY_RUN" == "true" ]; then
             echo "instance ${NAME} would get deleted."
         else
             $GCP_CMD compute instances delete --zone="$ZONE" "$NAME"
@@ -71,7 +71,7 @@ for image in $IMAGES; do
 
     if [[ $(date -d "${CREATION_TIME}" +%s) -lt ${DELETE_TIME} ]]; then
         NAME=$(echo "${image}" | jq -r '.name')
-        if [ $DRY_RUN == "true" ]; then
+        if [ "$DRY_RUN" == "true" ]; then
             echo "image ${NAME} would get deleted."
         else
             $GCP_CMD compute images delete "$NAME"

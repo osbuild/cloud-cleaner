@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # include the common library
-source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh"
 
 #---------------------------------------------------------------
 #                       OCI cleanup
@@ -47,7 +47,7 @@ for i in $INSTANCES; do
         continue
     fi
 
-    if [ $DRY_RUN == "true" ]; then
+    if [ "$DRY_RUN" == "true" ]; then
         echo "Dry run, skipping termination of instance $i"
         continue
     fi
@@ -72,7 +72,7 @@ for i in $IMAGES; do
         continue
     fi
 
-    if [ $DRY_RUN == "true" ]; then
+    if [ "$DRY_RUN" == "true" ]; then
         echo "Dry run, skipping deletion of image $i"
         continue
     fi

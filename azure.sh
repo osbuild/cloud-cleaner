@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # include the common library
-source $(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/common.sh"
 
 #---------------------------------------------------------------
 #                       Azure cleanup
@@ -52,10 +52,10 @@ for i in $(seq 0 $(("${#RESOURCE_TYPES[@]}" - 1))); do
         RESOURCE_TIME=$(echo "$FILTERED_RESOURCES" | jq -r ".[$j].createdTime")
         RESOURCE_TIME_SECONDS=$(date -d "$RESOURCE_TIME" +%s)
         if [[ "$RESOURCE_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
-            if [ $DRY_RUN == "true" ]; then
+            if [ "$DRY_RUN" == "true" ]; then
                 echo "Resource with id $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id") would get deleted"
             else
-                az resource delete --ids $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")
+                az resource delete --ids "$(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")"
                 echo "Deleted resource with id $(echo "$FILTERED_RESOURCES" | jq -r ".[$j].id")"
             fi
         fi
@@ -81,7 +81,7 @@ for i in $(seq 0 $(("$STORAGE_ACCOUNT_COUNT" - 1))); do
             BLOB_TIME=$(echo "$BLOB_LIST" | jq -r .["$i3"].properties.lastModified)
             BLOB_TIME_SECONDS=$(date -d "$BLOB_TIME" +%s)
             if [[ "$BLOB_TIME_SECONDS" -lt "$DELETE_TIME" ]]; then
-                if [ $DRY_RUN == "true" ]; then
+                if [ "$DRY_RUN" == "true" ]; then
                     echo "Blob $BLOB_NAME in $STORAGE_ACCOUNT_NAME's $CONTAINER_NAME container would get deleted."
                 else
                     echo "Deleting blob $BLOB_NAME in $STORAGE_ACCOUNT_NAME's $CONTAINER_NAME container."
