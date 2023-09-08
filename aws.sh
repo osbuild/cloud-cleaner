@@ -173,7 +173,7 @@ done
 print_separator 'Cleaning objects...'
 
 if [ -z "${AWS_BUCKET:-}" ]; then
-    echo "$AWS_BUCKET is empty, no object cleaning will be done"
+    echo "AWS_BUCKET is empty, no object cleaning will be done"
     exit 0
 fi
 OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])

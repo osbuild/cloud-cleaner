@@ -170,10 +170,12 @@ function cleanup_az_image_galleries {
                         echo "Image version $IMG_VERSION_NAME would get deleted"
                     else
                         az sig image-version delete \
+                            --only-show-errors \
                             --resource-group "$RESOURCE_GROUP_NAME" \
                             --gallery-name "$IMG_GALLERY_NAME" \
                             --gallery-image-definition "$IMG_DEF_NAME" \
                             --gallery-image-version "$IMG_VERSION_NAME"
+
                         echo "Deleted image version $IMG_VERSION_NAME"
                     fi
 
@@ -186,11 +188,16 @@ function cleanup_az_image_galleries {
                 if [ "$DRY_RUN" == "true" ]; then
                     echo "Image definition $IMG_DEF_NAME would get deleted"
                 else
-                    az sig image-definition delete \
-                        --resource-group "$RESOURCE_GROUP_NAME" \
-                        --gallery-name "$IMG_GALLERY_NAME" \
-                        --gallery-image-definition "$IMG_DEF_NAME"
-                    echo "Deleted image definition $IMG_DEF_NAME"
+                    if az sig image-definition delete \
+                           --only-show-errors \
+                           --resource-group "$RESOURCE_GROUP_NAME" \
+                           --gallery-name "$IMG_GALLERY_NAME" \
+                           --gallery-image-definition "$IMG_DEF_NAME"; then
+                        echo "Deleted image definition $IMG_DEF_NAME"
+                    else
+                        echo "Image definition $IMG_DEF_NAME could not be deleted. It will be deleted next time"
+                        continue
+                    fi
                 fi
 
                 _=$((img_definitions_deleted++))
@@ -202,10 +209,14 @@ function cleanup_az_image_galleries {
             if [ "$DRY_RUN" == "true" ]; then
                 echo "Image gallery $IMG_GALLERY_NAME would get deleted"
             else
-                az sig delete \
-                    --resource-group "$RESOURCE_GROUP_NAME" \
-                    --gallery-name "$IMG_GALLERY_NAME"
-                echo "Deleted image gallery $IMG_GALLERY_NAME"
+                if az sig delete \
+                       --only-show-errors \
+                       --resource-group "$RESOURCE_GROUP_NAME" \
+                       --gallery-name "$IMG_GALLERY_NAME"; then
+                    echo "Deleted image gallery $IMG_GALLERY_NAME"
+                else
+                    echo "Image gallery $IMG_GALLERY_NAME could not be deleted. It will be deleted next time"
+                fi
             fi
         fi
 
