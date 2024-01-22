@@ -33,10 +33,12 @@ gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.re
 function az_login {
     print_separator 'Logging into Azure...'
 
-    az login --service-principal \
+    az login --allow-no-subscriptions \
+        --service-principal \
         --username "${AZURE_CLIENT_ID:-}" \
         --password "${AZURE_CLIENT_SECRET:-}" \
         --tenant "${AZURE_TENANT_ID:-}"
+
 }
 
 function cleanup_az_resources {
