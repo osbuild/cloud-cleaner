@@ -92,6 +92,16 @@ jobs:
       - name: Run the cleaning script
         run: ./oci.sh
 
+  ib-openshift:
+    # always skip b/c OpenShift is not reachable outside VPN, see
+    # https://gitlab.cee.redhat.com/osbuild/vcenter-cleaner
+    if: never()
+    name: Image Builder OpenShift
+    runs-on: ubuntu-latest
+    steps:
+      - name: This workflow is internal only
+        run: echo
+
   ib-vmware:
     # always skip b/c GOVMOMI_URL_IB is not reachable outside VPN, see
     # https://gitlab.cee.redhat.com/osbuild/vcenter-cleaner
