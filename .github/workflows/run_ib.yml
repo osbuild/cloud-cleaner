@@ -95,7 +95,7 @@ jobs:
   ib-openshift:
     # always skip b/c OpenShift is not reachable outside VPN, see
     # https://gitlab.cee.redhat.com/osbuild/vcenter-cleaner
-    if: never()
+    if: ${{ ! always() }}
     name: Image Builder OpenShift
     runs-on: ubuntu-latest
     steps:
