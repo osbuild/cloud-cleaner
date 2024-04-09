@@ -55,7 +55,7 @@ for INSTANCE in ${ALL_VMS}; do
         if [ "$DRY_RUN" == "true" ]; then
             echo "The VM '${VM_NAME}' would be terminated"
         else
-            $OC_CLI delete vm --cascade='foreground' --force=true --timeout=300s "$VM_NAME" || echo
+            $OC_CLI delete vm "$VM_NAME"
             echo "The VM '${VM_NAME}' was terminated"
         fi
     fi
@@ -85,7 +85,7 @@ for INSTANCE in ${ALL_PVCS}; do
         if [ "$DRY_RUN" == "true" ]; then
             echo "The PVC '${PVC_NAME}' would be terminated"
         else
-            $OC_CLI delete pvc --cascade='foreground' --force=true --timeout=300s "$PVC_NAME" || echo
+            $OC_CLI delete pvc "$PVC_NAME"
             echo "The PVC '${PVC_NAME}' was terminated"
         fi
     fi
