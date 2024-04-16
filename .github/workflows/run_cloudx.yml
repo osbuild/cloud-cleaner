@@ -17,6 +17,8 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CLOUDX }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CLOUDX }}
       #AWS_BUCKET: ${{ secrets.AWS_BUCKET_CLOUDX }} Cloudx doesn't store objects for now
+      OLD_LINE: 'opt-in-not-required'
+      NEW_LINE: 'not-opted-in'
 
     steps:
       - name: Install dependencies
@@ -24,6 +26,10 @@ jobs:
 
       - name: Check out the repo
         uses: actions/checkout@v3
+
+      - name: Modify aws.sh
+        run: |
+          sed -i "s|${OLD_LINE}|${NEW_LINE}|" aws.sh
 
       - name: Run the cleaning script
         run: ./aws.sh
