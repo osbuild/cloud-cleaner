@@ -43,7 +43,7 @@ for region in ${REGIONS}; do
     # Remove old enough instances that don't have tag persist=true
     print_separator 'Cleaning instances...'
 
-    INSTANCES=$(${AWS_CMD} ec2 describe-instances | tr -d "[:space:]" | jq -c '.Reservations[].Instances[]')
+    INSTANCES=$(${AWS_CMD} ec2 describe-instances | tr -d "[:space:]" | jq -c '((.Reservations? // []).Instances? // [])[]')
 
     for instance in ${INSTANCES}; do
         REMOVE=1
@@ -83,7 +83,7 @@ for region in ${REGIONS}; do
     # Remove old enough images that don't have tag persist=true
     print_separator 'Cleaning images...'
 
-    IMAGES=$(${AWS_CMD} ec2 describe-images --owner self | tr -d "[:space:]" | jq -c '.Images[]')
+    IMAGES=$(${AWS_CMD} ec2 describe-images --owner self | tr -d "[:space:]" | jq -c '(.Images? // [])[]')
     PERSISTENT_SNAPSHOTS=""
 
     for image in ${IMAGES}; do
@@ -126,7 +126,7 @@ for region in ${REGIONS}; do
     # Remove old enough snapshots that don't have tag persist=true
     print_separator 'Cleaning snapshots...'
 
-    SNAPSHOTS=$(${AWS_CMD} ec2 describe-snapshots --owner self | tr -d "[:space:]" | jq -c '.Snapshots[]')
+    SNAPSHOTS=$(${AWS_CMD} ec2 describe-snapshots --owner self | tr -d "[:space:]" | jq -c '(.Snapshots? // [])[]')
 
     for snapshot in ${SNAPSHOTS}; do
         REMOVE=1
@@ -176,7 +176,7 @@ if [ -z "${AWS_BUCKET:-}" ]; then
     echo "AWS_BUCKET is empty, no object cleaning will be done"
     exit 0
 fi
-OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c .Contents[])
+OBJECTS=$($AWS_CMD s3api list-objects --bucket "${AWS_BUCKET}" | jq -c '(.Contents? // [])[]')
 
 for object in ${OBJECTS}; do
     REMOVE=1
