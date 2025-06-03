@@ -11,7 +11,7 @@ source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)/lib/comm
 
 greenprint "🔮☁ Starting OCI cleanup"
 
-if ! hash oci && [ ! -e /root/bin/oci ]; then
+if ! hash oci 2>/dev/null && [ ! -e /root/bin/oci ]; then
     echo 'No oci cli, cannot proceed'
     exit 1
 fi
@@ -22,6 +22,7 @@ echo "$OCI_CONFIG_DATA" > "$OCI_CONFIG"
 echo "key_file=${TEMPDIR}/priv_key.pem" >> "$OCI_CONFIG"
 
 OCI_CMD="/root/bin/oci --config-file $OCI_CONFIG"
+echo -n "OCI version: "
 $OCI_CMD --version
 $OCI_CMD setup repair-file-permissions --file "${TEMPDIR}/priv_key.pem"
 $OCI_CMD setup repair-file-permissions --file "$OCI_CONFIG"
