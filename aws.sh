@@ -36,49 +36,17 @@ $AWS_CMD_NO_REGION --version
 AWS_CMD="${AWS_CMD_NO_REGION} --region ${AWS_REGION}"
 REGIONS=$(${AWS_CMD} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus != "not-opted-in") | .RegionName')
 
+# This script is being rewritten in Python. So far, only the instance cleanup is done in Python, so let's call it here.
+if [ "$DRY_RUN" == "true" ]; then
+    ./aws.py --dry-run --max-age "${HOURS_BACK}"
+else
+    ./aws.py --max-age "${HOURS_BACK}"
+fi
+
 # We use resources in more than one region
 for region in ${REGIONS}; do
     AWS_CMD="${AWS_CMD_NO_REGION} --region ${region}"
     greenprint "Cleaning ${region}"
-    # Remove old enough instances that don't have tag persist=true
-    print_separator 'Cleaning instances...'
-
-    INSTANCES=$(${AWS_CMD} ec2 describe-instances | tr -d "[:space:]" | jq -c '((.Reservations? // []).Instances? // [])[]')
-
-    for instance in ${INSTANCES}; do
-        REMOVE=1
-        INSTANCE_ID=$(echo "${instance}" | jq -r '.InstanceId')
-        LAUNCH_TIME=$(echo "${instance}" | jq -r '.LaunchTime')
-
-        if [[ $(date -d "${LAUNCH_TIME}" +%s) -gt "${DELETE_TIME}" ]]; then
-            REMOVE=0
-            echo "The instance with id ${INSTANCE_ID} was launched less than ${HOURS_BACK} hours ago"
-        fi
-
-        HAS_TAGS="$(echo "${instance}" | jq 'has("Tags")')"
-        if [ "${HAS_TAGS}" = true ]; then
-            TAGS=$(echo "${instance}" | jq -c 'try .Tags[]')
-
-            for tag in ${TAGS}; do
-                KEY="$(echo "${tag}" | jq -r '.Key')"
-                VALUE="$(echo "${tag}" | jq -r '.Value')"
-
-                if [[ "${KEY}" == "persist" && "${VALUE}" == "true" ]]; then
-                    REMOVE=0
-                    echo "The instance with id ${INSTANCE_ID} has tag 'persist=true'"
-                fi
-            done
-        fi
-
-        if [ ${REMOVE} == 1 ]; then
-            if [ "$DRY_RUN" == "true" ]; then
-                echo "The instance with id ${INSTANCE_ID} would get terminated"
-            else
-                $AWS_CMD ec2 terminate-instances --instance-id "${INSTANCE_ID}"
-                echo "The instance with id ${INSTANCE_ID} was terminated"
-            fi
-        fi
-    done
 
     # Remove old enough images that don't have tag persist=true
     print_separator 'Cleaning images...'
