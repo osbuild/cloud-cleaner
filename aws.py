@@ -22,22 +22,26 @@ def get_tag_value(tags, key):
     return None
 
 
-def should_terminate_instance(instance, max_age_hours):
+def should_remove_resource(tags, creation_date, max_age_hours):
     """
-    Determine if an instance should be terminated based on its properties.
-    """
-    # Get instance tags
-    tags = instance.get("Tags", [])
-    persist_tag = get_tag_value(tags, "persist")
+    Determine if a resource should be removed based on its tags and age.
 
-    # Check persist tag first
+    Args:
+        tags (list): List of resource tags, each tag is a dict with 'Key' and 'Value' fields
+        creation_date (datetime): The creation timestamp of the resource
+        max_age_hours (int): Maximum allowed age in hours before resource is eligible for removal
+
+    Returns:
+        tuple: A pair of (bool, str) where:
+            - bool: True if resource should be removed, False otherwise
+            - str: Reason for the decision (None if should be removed, explanation string if kept)
+    """
+    persist_tag = get_tag_value(tags, "persist")
     if persist_tag and persist_tag.lower() == "true":
         return False, "persist=true"
 
-    launch_time = instance["LaunchTime"]
-
-    current_time = datetime.now(launch_time.tzinfo)
-    age_hours = (current_time - launch_time).total_seconds() / 3600
+    current_time = datetime.now(creation_date.tzinfo)
+    age_hours = (current_time - creation_date).total_seconds() / 3600
 
     if age_hours < max_age_hours:
         return False, f"age={age_hours:.1f}h"
@@ -78,8 +82,8 @@ def process_instances(region, max_age_hours, dry_run):
             instance_found = True
             instance_id = instance["InstanceId"]
 
-            should_terminate, reason = should_terminate_instance(
-                instance, max_age_hours
+            should_terminate, reason = should_remove_resource(
+                instance.get("Tags", []), instance["LaunchTime"], max_age_hours
             )
 
             if should_terminate:
