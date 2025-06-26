@@ -76,7 +76,7 @@ def process_instances(region, max_age_hours, dry_run):
         for instance in reservation["Instances"]:
             state = instance["State"]["Name"]
 
-            if state == "terminated":
+            if state in ["terminated", "shutting-down"]:
                 continue
 
             instance_found = True
