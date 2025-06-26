@@ -60,48 +60,55 @@ def get_enabled_regions():
     return [region["RegionName"] for region in regions["Regions"]]
 
 
-def process_instances(region, max_age_hours, dry_run):
-    """
-    Process EC2 instances in the specified region.
-    Lists all non-terminated instances and terminates unprotected ones if not in dry-run mode.
-    """
-    # Create EC2 client
-    ec2_client = boto3.client("ec2", region_name=region)
+class EC2ResourceCleaner:
+    def __init__(self, region, max_age_hours, dry_run):
+        self.region = region
+        self.max_age_hours = max_age_hours
+        self.dry_run = dry_run
+        self.ec2_client = boto3.client("ec2", region_name=region)
 
-    # Describe all instances
-    response = ec2_client.describe_instances()
+    def process_instances(self):
+        """
+        Process EC2 instances in the configured region.
+        Lists all non-terminated instances and terminates unprotected ones if not in dry-run mode.
+        """
+        response = self.ec2_client.describe_instances()
 
-    instance_found = False
-    for reservation in response["Reservations"]:
-        for instance in reservation["Instances"]:
-            state = instance["State"]["Name"]
+        instance_found = False
+        for reservation in response["Reservations"]:
+            for instance in reservation["Instances"]:
+                state = instance["State"]["Name"]
 
-            if state in ["terminated", "shutting-down"]:
-                continue
+                if state in ["terminated", "shutting-down"]:
+                    continue
 
-            instance_found = True
-            instance_id = instance["InstanceId"]
+                instance_found = True
+                instance_id = instance["InstanceId"]
 
-            should_terminate, reason = should_remove_resource(
-                instance.get("Tags", []), instance["LaunchTime"], max_age_hours
-            )
+                should_terminate, reason = should_remove_resource(
+                    instance.get("Tags", []), instance["LaunchTime"], self.max_age_hours
+                )
 
-            if should_terminate:
-                if dry_run:
-                    print(f"{region}: {instance_id}: WOULD TERMINATE")
+                if should_terminate:
+                    if self.dry_run:
+                        print(f"{self.region}: {instance_id}: WOULD TERMINATE")
+                    else:
+                        try:
+                            self.ec2_client.terminate_instances(
+                                InstanceIds=[instance_id]
+                            )
+                            print(f"{self.region}: {instance_id}: TERMINATING")
+                        except Exception as e:
+                            print(
+                                f"{self.region}: {instance_id}: FAILED TO TERMINATE ({str(e)})"
+                            )
                 else:
-                    try:
-                        ec2_client.terminate_instances(InstanceIds=[instance_id])
-                        print(f"{region}: {instance_id}: TERMINATING")
-                    except Exception as e:
-                        print(
-                            f"{region}: {instance_id}: FAILED TO TERMINATE ({str(e)})"
-                        )
-            else:
-                print(f"{region}: {instance_id}: WOULD NOT TERMINATE ({reason})")
+                    print(
+                        f"{self.region}: {instance_id}: WOULD NOT TERMINATE ({reason})"
+                    )
 
-    if not instance_found:
-        print(f"{region}: No non-terminated instances found")
+        if not instance_found:
+            print(f"{self.region}: No non-terminated instances found")
 
 
 def parse_args():
@@ -137,9 +144,10 @@ def main():
 
     for region in regions:
         try:
-            process_instances(
+            cleaner = EC2ResourceCleaner(
                 region=region, max_age_hours=args.max_age, dry_run=args.dry_run
             )
+            cleaner.process_instances()
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             error_message = e.response["Error"]["Message"]
