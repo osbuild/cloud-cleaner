@@ -19,11 +19,11 @@ jobs:
       AWS_BUCKET: ${{ secrets.AWS_BUCKET_438_IB }}
 
     steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
       - name: Install dependencies
         run: dnf install -y jq python3-pip && pip install -r requirements.txt
-
-      - name: Check out the repo
-        uses: actions/checkout@v3
 
       - name: Run the cleaning script
         run: ./aws.sh
