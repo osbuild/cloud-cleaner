@@ -34,108 +34,13 @@ fi
 $AWS_CMD_NO_REGION --version
 
 AWS_CMD="${AWS_CMD_NO_REGION} --region ${AWS_REGION}"
-REGIONS=$(${AWS_CMD} ec2 describe-regions | jq -rc '.Regions[] | select(.OptInStatus != "not-opted-in") | .RegionName')
 
-# This script is being rewritten in Python. So far, only the instance cleanup is done in Python, so let's call it here.
+# This script is being rewritten in Python. So far, only the instance, AMI and snapshot cleanup is done in Python, so let's call it here.
 if [ "$DRY_RUN" == "true" ]; then
     ./aws.py --dry-run --max-age "${HOURS_BACK}"
 else
     ./aws.py --max-age "${HOURS_BACK}"
 fi
-
-# We use resources in more than one region
-for region in ${REGIONS}; do
-    AWS_CMD="${AWS_CMD_NO_REGION} --region ${region}"
-    greenprint "Cleaning ${region}"
-
-    # Remove old enough images that don't have tag persist=true
-    print_separator 'Cleaning images...'
-
-    IMAGES=$(${AWS_CMD} ec2 describe-images --owner self | tr -d "[:space:]" | jq -c '(.Images? // [])[]')
-    PERSISTENT_SNAPSHOTS=""
-
-    for image in ${IMAGES}; do
-        REMOVE=1
-        IMAGE_ID=$(echo "${image}" | jq -r '.ImageId')
-        CREATION_DATE=$(echo "${image}" | jq -r '.CreationDate')
-
-        if [[ $(date -d "${CREATION_DATE}" +%s) -gt "${DELETE_TIME}" ]]; then
-            REMOVE=0
-            echo "The image with id ${IMAGE_ID} was created less than ${HOURS_BACK} hours ago"
-        fi
-
-        HAS_TAGS=$(echo "${image}" | jq 'has("Tags")')
-        if [ "${HAS_TAGS}" == "true" ]; then
-            TAGS=$(echo "${image}" | jq -c 'try .Tags[]')
-
-            for tag in ${TAGS}; do
-                KEY=$(echo "${tag}" | jq -r '.Key')
-                VALUE=$(echo "${tag}" | jq -r '.Value')
-
-                if [[ "${KEY}" == "persist" && "${VALUE}" == "true" ]]; then
-                    REMOVE=0
-                    echo "The image with id ${IMAGE_ID} has tag 'persist=true'"
-                    IMAGE_SNAPSHOT=$(echo "${image}" | jq -rc 'try .BlockDeviceMappings[0].Ebs.SnapshotId')
-                    PERSISTENT_SNAPSHOTS="$PERSISTENT_SNAPSHOTS $IMAGE_SNAPSHOT"
-                fi
-            done
-        fi
-
-        if [ ${REMOVE} == 1 ]; then
-            if [ "$DRY_RUN" == "true" ]; then
-                echo "The image with id ${IMAGE_ID} would get deregistered"
-            else
-                $AWS_CMD ec2 deregister-image --image-id "${IMAGE_ID}"
-                echo "The image with id ${IMAGE_ID} was deregistered"
-            fi
-        fi
-    done
-
-    # Remove old enough snapshots that don't have tag persist=true
-    print_separator 'Cleaning snapshots...'
-
-    SNAPSHOTS=$(${AWS_CMD} ec2 describe-snapshots --owner self | tr -d "[:space:]" | jq -c '(.Snapshots? // [])[]')
-
-    for snapshot in ${SNAPSHOTS}; do
-        REMOVE=1
-        SNAPSHOT_ID=$(echo "${snapshot}" | jq -r '.SnapshotId')
-        START_TIME=$(echo "${snapshot}" | jq -r '.StartTime')
-
-        if [[ $(date -d "${START_TIME}" +%s) -gt "${DELETE_TIME}" ]]; then
-            REMOVE=0
-            echo "The snapshot with id ${SNAPSHOT_ID} was created less than ${HOURS_BACK} hours ago"
-        fi
-
-        HAS_TAGS=$(echo "${snapshot}" | jq 'has("Tags")')
-        if [ "${HAS_TAGS}" == "true" ]; then
-            TAGS=$(echo "${snapshot}" | jq -c 'try .Tags[]')
-
-            for tag in ${TAGS}; do
-                KEY=$(echo "${tag}" | jq -r '.Key')
-                VALUE=$(echo "${tag}" | jq -r '.Value')
-
-                if [[ "${KEY}" == "persist" && "${VALUE}" == "true" ]]; then
-                    REMOVE=0
-                    echo "The snapshot with id ${SNAPSHOT_ID} has tag 'persist=true'"
-                fi
-            done
-        fi
-
-        if [[ "${PERSISTENT_SNAPSHOTS}" =~ ${SNAPSHOT_ID} ]]; then
-            echo "Skipping snaphshot ${SNAPSHOT_ID} b/c it is used by persistent AMI"
-            REMOVE=0
-        fi
-
-        if [ ${REMOVE} == 1 ]; then
-            if [ "$DRY_RUN" == "true" ]; then
-                echo "The snapshot with id ${SNAPSHOT_ID} would get deleted"
-            else
-                $AWS_CMD ec2 delete-snapshot --snapshot-id "${SNAPSHOT_ID}"
-                echo "The snapshot with id ${SNAPSHOT_ID} was deleted"
-            fi
-        fi
-    done
-done
 
 # Remove old enough objects that don't have tag persist=true
 print_separator 'Cleaning objects...'
