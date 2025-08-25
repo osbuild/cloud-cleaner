@@ -16,7 +16,6 @@ jobs:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438_IB }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438_IB }}
-      AWS_BUCKET: ${{ secrets.AWS_BUCKET_438_IB }}
 
     steps:
       - name: Check out the repo

@@ -16,7 +16,6 @@ jobs:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_CLOUDX }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_CLOUDX }}
-      #AWS_BUCKET: ${{ secrets.AWS_BUCKET_CLOUDX }} Cloudx doesn't store objects for now
 
     steps:
       - name: Check out the repo
