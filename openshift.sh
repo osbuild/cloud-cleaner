@@ -15,9 +15,9 @@ TEMPDIR=$(mktemp -d)
 # install the OpenShift cli & virtctl binary
 sudo dnf -y install wget jq
 # https://docs.openshift.com/container-platform/4.13/cli_reference/openshift_cli/getting-started-cli.html
-wget --no-check-certificate https://downloads-openshift-console.apps.ocp-virt.prod.psi.redhat.com/amd64/linux/oc.tar --directory-prefix "$TEMPDIR"
+wget --no-check-certificate https://downloads-openshift-console.apps.prod-scale-spoke1-aws-us-east-1.itup.redhat.com/amd64/linux/oc.tar --directory-prefix "$TEMPDIR"
 # https://docs.openshift.com/container-platform/4.13/virt/virt-using-the-cli-tools.html
-wget --no-check-certificate https://hyperconverged-cluster-cli-download-openshift-cnv.apps.ocp-virt.prod.psi.redhat.com/amd64/linux/virtctl.tar.gz --directory-prefix "$TEMPDIR"
+wget --no-check-certificate https://hyperconverged-cluster-cli-download-openshift-cnv.apps.prod-scale-spoke1-aws-us-east-1.itup.redhat.com/amd64/linux/virtctl.tar.gz --directory-prefix "$TEMPDIR"
 pushd "$TEMPDIR"
 tar -xvf oc.tar
 tar -xzvf virtctl.tar.gz
@@ -30,7 +30,7 @@ chmod a+x "$VIRTCTL"
 
 # Authenticate via the gitlab-ci service account
 # oc describe secret gitab-ci-token-g7sw2
-$OC_CLI login --token="$OPENSHIFT_TOKEN" --server=https://api.ocp-virt.prod.psi.redhat.com:6443 --insecure-skip-tls-verify=true
+$OC_CLI login --token="$OPENSHIFT_TOKEN" --server=https://api.prod-scale-spoke1-aws-us-east-1.itup.redhat.com:6443 --insecure-skip-tls-verify=true
 $OC_CLI whoami
 
 OPENSHIFT_PROJECT="image-builder"
