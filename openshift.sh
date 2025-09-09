@@ -33,7 +33,7 @@ chmod a+x "$VIRTCTL"
 $OC_CLI login --token="$OPENSHIFT_TOKEN" --server=https://api.prod-scale-spoke1-aws-us-east-1.itup.redhat.com:6443 --insecure-skip-tls-verify=true
 $OC_CLI whoami
 
-OPENSHIFT_PROJECT="image-builder"
+OPENSHIFT_PROJECT="image-builder--runtime-int"
 $OC_CLI project $OPENSHIFT_PROJECT
 
 # iterate over VMs - note: remove the .spec.template field b/c cloud-init data contains
