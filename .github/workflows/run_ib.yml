@@ -39,8 +39,8 @@ jobs:
       AZURE_TENANT_ID: "${{ secrets.AZURE_TENANT_ID_IB }}"
 
     steps:
-      - name: Install dependencies
-        run: dnf install -y jq
+o      - name: Install dependencies
+        run: dnf install -y jq antlr4 python3-antlr4-runtime
 
       - name: Check out the repo
         uses: actions/checkout@v3
