@@ -61,32 +61,32 @@ for INSTANCE in ${ALL_VMS}; do
     fi
 done
 
-# wait 60 seconds before attemtping to remove any PVCs
+# wait 60 seconds before attemtping to remove any DVs
 # in case cascade removal is still running in the background
 if [ "$DRY_RUN" != "true" ]; then
     sleep 60
 fi
 
-# iterate over PVCs - removing fields which break the echo command
-ALL_PVCS=$($OC_CLI get pvc --output json | jq 'del(.items[].metadata.annotations)' | jq -c '.items[]')
-for INSTANCE in ${ALL_PVCS}; do
+# iterate over DVs - removing fields which break the echo command
+ALL_DVS=$($OC_CLI get datavolume --output json | jq 'del(.items[].metadata.annotations)' | jq -c '.items[]')
+for INSTANCE in ${ALL_DVS}; do
     REMOVE=1
-    PVC_NAME=$(echo "${INSTANCE}" | jq -r '.metadata.name')
+    DV_NAME=$(echo "${INSTANCE}" | jq -r '.metadata.name')
     CREATION_TIME=$(echo "${INSTANCE}" | jq -r '.metadata.creationTimestamp')
 
     if [[ $(date -d "${CREATION_TIME}" +%s) -gt "${DELETE_TIME}" ]]; then
         REMOVE=0
-        echo "PVC '${PVC_NAME}' was created less than ${HOURS_BACK} hours ago"
+        echo "Datavolume '${DV_NAME}' was created less than ${HOURS_BACK} hours ago"
     fi
 
     # TODO: check for tag persist=true
 
     if [ ${REMOVE} == 1 ]; then
         if [ "$DRY_RUN" == "true" ]; then
-            echo "The PVC '${PVC_NAME}' would be terminated"
+            echo "The datavolume '${DV_NAME}' would be terminated"
         else
-            $OC_CLI delete pvc "$PVC_NAME"
-            echo "The PVC '${PVC_NAME}' was terminated"
+            $OC_CLI delete pvc "$DV_NAME"
+            echo "The datavolume '${DV_NAME}' was terminated"
         fi
     fi
 done
