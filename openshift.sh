@@ -68,7 +68,7 @@ if [ "$DRY_RUN" != "true" ]; then
 fi
 
 # iterate over DVs - removing fields which break the echo command
-ALL_DVS=$($OC_CLI get datavolume --output json | jq 'del(.items[].metadata.annotations)' | jq -c '.items[]')
+ALL_DVS=$($OC_CLI get datavolume --output json | jq 'del(.items[].metadata.annotations)' | jq 'del(.items[].status)' | jq -c '.items[]')
 for INSTANCE in ${ALL_DVS}; do
     REMOVE=1
     DV_NAME=$(echo "${INSTANCE}" | jq -r '.metadata.name')
