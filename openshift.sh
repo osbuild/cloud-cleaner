@@ -85,7 +85,7 @@ for INSTANCE in ${ALL_DVS}; do
         if [ "$DRY_RUN" == "true" ]; then
             echo "The datavolume '${DV_NAME}' would be terminated"
         else
-            $OC_CLI delete pvc "$DV_NAME"
+            $OC_CLI delete dv "$DV_NAME"
             echo "The datavolume '${DV_NAME}' was terminated"
         fi
     fi
