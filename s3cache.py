@@ -15,7 +15,7 @@ Cache cleanup for this bucket is handled separately and with special rules:
 """
 import argparse
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import boto3
 from botocore.exceptions import ClientError
@@ -27,6 +27,8 @@ def collect_prefixes_to_delete(s3, now):
     paginator = s3.get_paginator("list_objects_v2")
 
     prefixes = []
+
+    mtime_cutoff = now - timedelta(days=14)
 
     for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix="images/"):
         for obj in page.get("Contents", []):
@@ -45,6 +47,12 @@ def collect_prefixes_to_delete(s3, now):
 
                 if delete_after < now:
                     prefixes.append(os.path.dirname(key))
+                continue
+
+            # if the object wasn't tagged, fall back to mtime and add it to the deletion list if it's over 2 weeks old
+            mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
+            if mtime < mtime_cutoff:
+                prefixes.append(os.path.dirname(key))
 
     return prefixes
 
