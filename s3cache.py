@@ -86,6 +86,24 @@ def collect_root_blobs_to_delete(s3, now):
     return blobs
 
 
+def delete_objects(s3, objects):
+    response = s3.delete_objects(Bucket=BUCKET_NAME, Delete=objects)
+    print("\n".join([obj["Key"] for obj in response.get("Deleted", [])]))
+
+
+def delete(s3, prefixes, blobs):
+    for prefix in prefixes:
+        print(f"--- Deleting blobs under {prefix} ---")
+        for page in s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET_NAME, Prefix=prefix):
+            if "Contents" in page:
+                objects = {"Objects": [{"Key": obj["Key"]} for obj in page["Contents"]]}
+                delete_objects(s3, objects)
+
+    print("--- Deleting blobs ---")
+    objects = {"Objects": [{"Key": blob} for blob in blobs]}
+    delete_objects(s3, objects)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=f"Clean up s3://{BUCKET_NAME}.")
     parser.add_argument(
@@ -113,6 +131,8 @@ def main():
             print("Would delete (blobs):")
             print("\n".join(blobs))
             return
+
+        delete(s3, prefixes, blobs)
 
     except ClientError as e:
         error_code = e.response["Error"]["Code"]
