@@ -33,12 +33,13 @@ def collect_prefixes_to_delete(s3, now):
     for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix="images/"):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            print(f"Processing {key}")
 
             filename = os.path.basename(key)
             if filename != "info.json":
                 continue
 
+            prefix = os.path.dirname(key)
+            print(f"Processing {prefix}", end=": ")
             tagging = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
             tags = {t["Key"]: t["Value"] for t in tagging.get("TagSet", [])}
 
@@ -46,13 +47,19 @@ def collect_prefixes_to_delete(s3, now):
                 delete_after = datetime.fromisoformat(tags["DeleteAfter"])
 
                 if delete_after < now:
-                    prefixes.append(os.path.dirname(key))
+                    prefix = os.path.dirname(key)
+                    print(f"[DeleteAfter {delete_after} < {now}]")
+                    prefixes.append(prefix)
                 continue
 
             # if the object wasn't tagged, fall back to mtime and add it to the deletion list if it's over 2 weeks old
             mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
             if mtime < mtime_cutoff:
-                prefixes.append(os.path.dirname(key))
+                print(f"[mtime {mtime} < {mtime_cutoff}]")
+                prefixes.append(prefix)
+                continue
+
+            print("KEEPING")
 
     return prefixes
 
@@ -67,10 +74,14 @@ def collect_root_blobs_to_delete(s3, now):
     for page in paginator.paginate(Bucket=BUCKET_NAME, Delimiter="/"):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            print(f"Processing {key}")
+            print(f"Processing {key}", end=": ")
             mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
             if mtime < mtime_cutoff:
+                print(f"[mtime {mtime} < {mtime_cutoff}]")
                 blobs.append(key)
+                continue
+
+            print("KEEPING")
 
     return blobs
 
