@@ -1,0 +1,29 @@
+---
+name: Run cloud-cleaner Image Builder CI cache
+
+"on":
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # every day
+
+jobs:
+  ib-aws-s3-cache:
+    name: Image Builder images-ci-cache bucket
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/osbuild/cloud-tools:latest
+
+    env:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_438_IB }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_438_IB }}
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: dnf install -y python3-pip && pip install -r requirements.txt
+
+      - name: Run the cleaning script
+        run: ./s3cache.py
