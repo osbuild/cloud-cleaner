@@ -57,6 +57,24 @@ def collect_prefixes_to_delete(s3, now):
     return prefixes
 
 
+def collect_root_blobs_to_delete(s3, now):
+    paginator = s3.get_paginator("list_objects_v2")
+
+    blobs = []
+
+    mtime_cutoff = now - timedelta(hours=2)
+
+    for page in paginator.paginate(Bucket=BUCKET_NAME, Delimiter="/"):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            print(f"Processing {key}")
+            mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
+            if mtime < mtime_cutoff:
+                blobs.append(key)
+
+    return blobs
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=f"Clean up s3://{BUCKET_NAME}.")
     parser.add_argument(
@@ -76,10 +94,13 @@ def main():
         now = datetime.now(timezone.utc)
         s3 = boto3.client("s3")
         prefixes = collect_prefixes_to_delete(s3, now)
+        blobs = collect_root_blobs_to_delete(s3, now)
 
         if dry:
-            print("Would delete:")
+            print("Would delete (prefixes):")
             print("\n".join(prefixes))
+            print("Would delete (blobs):")
+            print("\n".join(blobs))
             return
 
     except ClientError as e:
