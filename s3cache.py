@@ -119,16 +119,16 @@ def main():
     dry = args.dry_run
 
     try:
-        print(f"Cleaning up {BUCKET_NAME}...")
+        print(f"=== Cleaning up {BUCKET_NAME} ===")
         now = datetime.now(timezone.utc)
         s3 = boto3.client("s3")
         prefixes = collect_prefixes_to_delete(s3, now)
         blobs = collect_root_blobs_to_delete(s3, now)
 
         if dry:
-            print("Would delete (prefixes):")
+            print("--- Would delete (prefixes) ---")
             print("\n".join(prefixes))
-            print("Would delete (blobs):")
+            print("--- Would delete (blobs) ---")
             print("\n".join(blobs))
             return
 
