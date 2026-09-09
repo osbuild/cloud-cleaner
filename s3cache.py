@@ -85,14 +85,18 @@ def collect_root_blobs_to_delete(s3, now):
     return blobs
 
 
-def delete_objects(s3, objects):
-    response = s3.delete_objects(Bucket=BUCKET_NAME, Delete=objects)
-    if "Errors" in response:
-        # dump the error response, make no assumptions about its structure
-        print("Error deleting keys")
-        print(json.dumps(response["Errors"], indent=2))
+def delete_objects(s3, keys):
+    # s3.delete_objects() can only delete up to 1000 keys at once, so we need to slice the list
+    for batch_index in range(0, len(keys), 1000):
+        batch_keys = keys[batch_index:batch_index+1000]
 
-    print("\n".join([obj["Key"] for obj in response.get("Deleted", [])]))
+        response = s3.delete_objects(Bucket=BUCKET_NAME, Delete={"Objects": batch_keys})
+        if "Errors" in response:
+            # dump the error response, make no assumptions about its structure
+            print("Error deleting keys")
+            print(json.dumps(response["Errors"], indent=2))
+
+        print("\n".join([obj["Key"] for obj in response.get("Deleted", [])]))
 
 
 def delete(s3, prefixes, blobs):
@@ -100,12 +104,12 @@ def delete(s3, prefixes, blobs):
         print(f"--- Deleting blobs under {prefix} ---")
         for page in s3.get_paginator("list_objects_v2").paginate(Bucket=BUCKET_NAME, Prefix=prefix):
             if "Contents" in page:
-                objects = {"Objects": [{"Key": obj["Key"]} for obj in page["Contents"]]}
-                delete_objects(s3, objects)
+                keys = [{"Key": obj["Key"]} for obj in page["Contents"]]
+                delete_objects(s3, keys)
 
     print("--- Deleting blobs ---")
-    objects = {"Objects": [{"Key": blob} for blob in blobs]}
-    delete_objects(s3, objects)
+    keys = [{"Key": blob} for blob in blobs]
+    delete_objects(s3, keys)
 
 
 def parse_args():
