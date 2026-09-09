@@ -14,6 +14,7 @@ Cache cleanup for this bucket is handled separately and with special rules:
   2 weeks old.
 """
 import argparse
+import json
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -86,6 +87,11 @@ def collect_root_blobs_to_delete(s3, now):
 
 def delete_objects(s3, objects):
     response = s3.delete_objects(Bucket=BUCKET_NAME, Delete=objects)
+    if "Errors" in response:
+        # dump the error response, make no assumptions about its structure
+        print("Error deleting keys")
+        print(json.dumps(response["Errors"], indent=2))
+
     print("\n".join([obj["Key"] for obj in response.get("Deleted", [])]))
 
 
