@@ -45,20 +45,19 @@ def collect_prefixes_to_delete(s3, now):
 
             if "DeleteAfter" in tags:
                 delete_after = datetime.fromisoformat(tags["DeleteAfter"])
-
                 if delete_after < now:
                     print(f"[DeleteAfter {delete_after} < {now}]")
                     prefixes.append(prefix)
-                continue
-
-            # if the object wasn't tagged, fall back to mtime and add it to the deletion list if it's over 2 weeks old
-            mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
-            if mtime < mtime_cutoff:
-                print(f"[mtime {mtime} < {mtime_cutoff}]")
-                prefixes.append(prefix)
-                continue
-
-            print("KEEPING")
+                else:
+                    print("KEEPING")
+            else:
+                # the object wasn't tagged, fall back to mtime and add it to the deletion list if it's over 2 weeks old
+                mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
+                if mtime < mtime_cutoff:
+                    print(f"[mtime {mtime} < {mtime_cutoff}]")
+                    prefixes.append(prefix)
+                else:
+                    print("KEEPING")
 
     return prefixes
 
