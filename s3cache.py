@@ -16,6 +16,7 @@ Cache cleanup for this bucket is handled separately and with special rules:
 import argparse
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 import boto3
@@ -150,8 +151,10 @@ def main():
         error_code = e.response["Error"]["Code"]
         error_message = e.response["Error"]["Message"]
         print(f"AWS API error - {error_code}: {error_message}")
+        sys.exit(1)
     except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"Unexpected error - {str(e)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
