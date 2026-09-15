@@ -46,6 +46,8 @@ def collect_prefixes_to_delete(s3, now):
 
             if "DeleteAfter" in tags:
                 delete_after = datetime.fromisoformat(tags["DeleteAfter"])
+                if delete_after.tzinfo is None:
+                    delete_after = delete_after.replace(tzinfo=timezone.utc)
                 if delete_after < now:
                     print(f"[DeleteAfter {delete_after} < {now}]")
                     prefixes.append(prefix)
