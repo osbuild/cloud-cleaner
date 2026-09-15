@@ -91,6 +91,8 @@ def delete_objects(s3, keys):
     # s3.delete_objects() can only delete up to 1000 keys at once, so we need to slice the list
     for batch_index in range(0, len(keys), 1000):
         batch_keys = keys[batch_index:batch_index+1000]
+        if not batch_keys:
+            return
 
         response = s3.delete_objects(Bucket=BUCKET_NAME, Delete={"Objects": batch_keys})
         if "Errors" in response:
