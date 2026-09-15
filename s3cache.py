@@ -55,7 +55,7 @@ def collect_prefixes_to_delete(s3, now):
                     print("KEEPING")
             else:
                 # the object wasn't tagged, fall back to mtime and add it to the deletion list if it's over 2 weeks old
-                mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
+                mtime = obj["LastModified"]
                 if mtime < mtime_cutoff:
                     print(f"[mtime {mtime} < {mtime_cutoff}]")
                     prefixes.append(prefix)
@@ -76,7 +76,7 @@ def collect_root_blobs_to_delete(s3, now):
         for obj in page.get("Contents", []):
             key = obj["Key"]
             print(f"Processing {key}", end=": ")
-            mtime = s3.head_object(Bucket=BUCKET_NAME, Key=key)["LastModified"]
+            mtime = obj["LastModified"]
             if mtime < mtime_cutoff:
                 print(f"[mtime {mtime} < {mtime_cutoff}]")
                 blobs.append(key)
